@@ -4,6 +4,8 @@ Student-facing site for MA371 Linear Algebra. The course hub is `/ma371/`; Proje
 
 The OR page contains an embedded no-coding calculator powered by Python and NumPy in a browser worker (Pyodide 314.0.7). Students select Load calculator, enter numbers or move sliders, select Run analysis, and export an evidence ZIP. Nothing is calculated automatically. An optional code view is read-only. Session history is in memory and is cleared by refresh/closing; inputs are not sent to a computation server. The inquiry has an interactive training-count-to-matrix-column diagram. Completed calculator runs show deadline, trajectory, and effectiveness-sensitivity charts plus a margin animation of expected vehicle flow. Its icons are proportional samples; exact expected values appear beside them. Motion can be paused and does not autoplay when the browser requests reduced motion.
 
+Every site page offers Auto, Light, and Dark appearance. Auto follows the device preference; an explicit choice is stored locally in the browser and applies across the site. The OR landing page uses an original, illustrative Stryker-like fleet-depot banner; it does not depict real unit data or exact vehicle transitions.
+
 Python and NumPy are downloaded from jsDelivr on first load; internet/CDN access is required. No Google account is required for the embedded calculator. The self-contained Colab notebook remains a fallback. The web inquiry is printable; the LaTeX source is included. All data are synthetic. Vectors have arrow notation and computed vectors appear as 3 × 1 columns.
 
 ## Publishing

@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "case_id": "MA371_OR_PILOT_V1",
+  "data_status": "Entirely synthetic teaching data; not operational evidence.",
+  "states": [
+    "Ready",
+    "Routine maintenance",
+    "Major repair"
+  ],
+  "matrix_convention": "Rows are next-week destinations; columns are current-week origins; x is a column vector.",
+  "training_counts": [
+    [
+      80,
+      50,
+      20
+    ],
+    [
+      15,
+      40,
+      30
+    ],
+    [
+      5,
+      10,
+      50
+    ]
+  ],
+  "holdout_counts": [
+    [
+      76,
+      48,
+      18
+    ],
+    [
+      18,
+      42,
+      29
+    ],
+    [
+      6,
+      10,
+      53
+    ]
+  ],
+  "initial_fleet": [
+    30,
+    40,
+    30
+  ],
+  "deadline_weeks": 2,
+  "expected_ready_target": 70,
+  "option_cost_dollars": 20000,
+  "proposed_prevention": [
+    [
+      0.95,
+      0.5,
+      0.2
+    ],
+    [
+      0.04,
+      0.4,
+      0.3
+    ],
+    [
+      0.01,
+      0.1,
+      0.5
+    ]
+  ],
+  "proposed_repair": [
+    [
+      0.8,
+      0.65,
+      0.4
+    ],
+    [
+      0.15,
+      0.3,
+      0.35
+    ],
+    [
+      0.05,
+      0.05,
+      0.25
+    ]
+  ],
+  "proposal_status": "Hypothetical planning estimates; no intervention observations supplied.",
+  "assumptions": [
+    "Closed fleet with 100 vehicles in the default case",
+    "Mutually exclusive exhaustive states assessed at weekly boundaries",
+    "Transitions depend on current state, not earlier history",
+    "Rates constant over the modeled period",
+    "Immediate policy effects; one option only; identical one-time budget",
+    "Fractional outputs are expected counts, not promises of actual readiness"
+  ]
+}

@@ -1,0 +1,198 @@
+\documentclass[10pt,letterpaper]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{amsmath,amssymb,bm,array,booktabs,tabularx}
+\usepackage[shortlabels]{enumitem}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{fancyhdr}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.35em}
+\renewcommand{\arraystretch}{1.15}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\spacefor}[1]{\vspace{#1}}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{MA371 --- Project 1 OR Pilot}
+\rhead{AY27-1}
+\cfoot{\thepage}
+\setlength{\headheight}{14pt}
+\begin{document}
+\begin{center}
+{\Large\bfseries Keeping a Fleet Ready}\\
+{\large Guided Inquiry and Individual Writing Assignment}
+\end{center}
+Name: \underline{\hspace{2.3in}}\quad Inquiry partners: \underline{\hspace{2.1in}}
+
+\textbf{The decision.} A notional maintenance officer has a closed fleet of 100 vehicles: 30 ready, 40 in routine maintenance, and 30 in major repair. A training event is two weeks away. The planning criterion is \emph{at least 70 expected-ready vehicles at the end of week 2}. Exactly one proposal can receive the same fictional one-time \$20,000 budget:
+\begin{itemize}[nosep]
+\item \textbf{Prevention}: reduce maintenance entry from the ready state.
+\item \textbf{Faster repairs}: improve return-to-ready transitions for vehicles already in maintenance.
+\end{itemize}
+Advise which proposal, if either, the evidence supports for this deadline. Also explain whether a longer planning horizon could change the decision. \textbf{All records and estimates are synthetic teaching data, not operational evidence.}
+
+\textbf{Classroom plan (50 minutes).} Understand the case (8); construct the model (10); investigate with the notebook (12); challenge the evidence (12); prepare a claim and save work (8). Work collaboratively in class; the final written product is individual.
+
+\section*{1. Separate the decision, data, and assumptions}
+\begin{enumerate}[label=(\alph*),nosep]
+\item Who is your audience? What quantity and deadline will you use to compare proposals?
+\spacefor{0.35in}
+\item What is the difference between \emph{70 expected-ready vehicles} and a guarantee of 70 actual ready vehicles?
+\spacefor{0.4in}
+\end{enumerate}
+The state order is \textbf{Ready, Routine maintenance, Major repair}. A pooled record contains these current-week to next-week transitions:
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Next week / Current week & Ready & Routine & Major\\
+\midrule
+Ready &80&50&20\\
+Routine &15&40&30\\
+Major &5&10&50\\
+\bottomrule
+\end{tabular}
+\end{center}
+Each origin column contains 100 observations; there are 300 records in total. These are \emph{not} the current fleet counts.
+\begin{enumerate}[label=(\alph*),resume,nosep]
+\item Write the state vector $\bm{x}_k$, including the meaning and units of each coordinate.
+\spacefor{0.45in}
+\item Identify one assumption needed to apply these pooled observations to the current fleet. Why might it fail?
+\spacefor{0.45in}
+\end{enumerate}
+
+\newpage
+\section*{2. Translate the case into linear algebra}
+Use the column-vector convention
+\[
+\underbrace{\bm{x}_{k+1}}_{3\times1}
+=\underbrace{A}_{3\times3}\underbrace{\bm{x}_k}_{3\times1},
+\qquad
+a_{ij}=\frac{\text{transitions from origin }j\text{ to destination }i}
+{\text{all observed transitions from origin }j}.
+\]
+\begin{enumerate}[label=(\alph*),nosep]
+\item Construct the first column of the baseline matrix. Explain its entries in words.
+\spacefor{0.45in}
+\item Construct the whole baseline matrix $A_0$. What should each column sum to? Why?
+\spacefor{0.65in}
+\item Calculate $\bm{x}_1=A_0(30,40,30)^T$ by hand. Show a dot product for its ready coordinate. Check the total.
+\spacefor{0.75in}
+\end{enumerate}
+The proposals supply the following \textbf{planning estimates}, not observed intervention results:
+\[
+A_P=\begin{bmatrix}.95&.50&.20\\.04&.40&.30\\.01&.10&.50\end{bmatrix},
+\qquad
+A_F=\begin{bmatrix}.80&.65&.40\\.15&.30&.35\\.05&.05&.25\end{bmatrix}.
+\]
+Rates are assumed constant; effects begin immediately; states are exclusive and exhaustive; transitions depend only on current state. No vehicles enter or leave the fleet.
+\begin{enumerate}[label=(\alph*),resume,nosep]
+\item Which entries differ from baseline, and how do those changes represent each proposal?
+\spacefor{0.45in}
+\item \textbf{Predict before computing:} Which proposal might help most at week 2? Which might help most eventually? Give a reason; a wrong prediction is not a grading penalty.
+\spacefor{0.5in}
+\end{enumerate}
+
+\newpage
+\section*{3. Use the notebook as an analytical instrument}
+Open \texttt{OR\_Fleet\_Readiness.ipynb} using the instructor's link. Run its cells unchanged to display the controls. Keep the supplied transition counts, initial fleet, deadline, and target for your first run. Click \textbf{Run analysis}. Coding is not required.
+
+\textbf{Tools and meanings.}
+\begin{itemize}[nosep]
+\item $\bm{x}_k=A^k\bm{x}_0$ describes the finite-horizon forecast. Repeated multiplication gives the same forecast.
+\item If $A=PDP^{-1}$, then $A^k=PD^kP^{-1}$: the eigenvalues describe how eigenvector modes change with time.
+\item A normalized eigenvector $\bm{p}$ satisfying $A\bm{p}=\bm{p}$ and $\sum_i p_i=1$ is a stationary distribution. For these default matrices, the other eigenvalues have magnitude below 1, so the model approaches this distribution.
+\item A numerical residual checks a calculation. It does not establish that the model represents actual fleet behavior.
+\end{itemize}
+\begin{center}
+\begin{tabularx}{\textwidth}{lYYYY}
+\toprule
+Policy & Expected ready, week 2 & Target met in expectation? & Long-term expected ready & Run ID\\
+\midrule
+Baseline &&&&\\[0.3in]
+Prevention &&&&\\[0.3in]
+Faster repairs &&&&\\[0.3in]
+\bottomrule
+\end{tabularx}
+\end{center}
+\begin{enumerate}[label=(\alph*),nosep]
+\item Explain the meaning of the eigenvalue 1 and its eigenvector in this case. Why should the steady-state vector not be substituted for a week-2 forecast?
+\spacefor{0.55in}
+\item Use the ready-versus-week plot to identify when the ordering of the two proposals changes. Explain how that relates to your predictions.
+\spacefor{0.45in}
+\item Record one numerical check and its result. What exactly does it verify?
+\spacefor{0.4in}
+\end{enumerate}
+\textbf{Save evidence now.} Click \textbf{Export last run}. Retain the ZIP and its run ID. Exports describe the last completed run, not unrun changes in the controls.
+
+\newpage
+\section*{4. Challenge the result}
+\textbf{A. A held-out baseline check.} A separate test cohort contains 100 starting observations from each state. Its observed destination counts are:
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Next week / Current week & Ready & Routine & Major\\
+\midrule
+Ready &76&48&18\\
+Routine &18&42&29\\
+Major &6&10&53\\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{enumerate}[label=(\alph*),nosep]
+\item Why is the prediction for this check $A_0(100,100,100)^T$, rather than $A_0(30,40,30)^T$? Record predicted and observed destination totals.
+\spacefor{0.5in}
+\item What discrepancy do you see? Does this check provide evidence about the proposed intervention matrices? Explain.
+\spacefor{0.4in}
+\end{enumerate}
+\textbf{B. A sensitivity test.} Set both effect sliders to $50\%$, leaving all other inputs unchanged. The tool interpolates between baseline and the proposal:
+\[
+A(f)=(1-f)A_0+fA_{\mathrm{proposal}},\qquad 0\le f\le1.
+\]
+This is a hypothetical partial-effect scenario, not a confidence interval.
+\begin{enumerate}[label=(\alph*),resume,nosep]
+\item Record each proposal's week-2 expected readiness. Does either still meet the planning criterion?
+\spacefor{0.35in}
+\item Choose one additional test (deadline, starting fleet mix with total 100, or effectiveness). Predict its effect, run it, and record the settings and run ID.
+\spacefor{0.45in}
+\item What assumption or missing evidence most limits your recommendation?
+\spacefor{0.35in}
+\end{enumerate}
+\textbf{C. AI as a classroom coach (optional).} During the designated class session, you may ask an approved AI tool to explain a step, question an assumption, or critique an inference. Example: \emph{Ask me questions to test whether my conclusion follows from these results; do not write my recommendation.} Check its response yourself; do not provide real personnel or sensitive data.
+\begin{center}
+\begin{tabularx}{\textwidth}{YYY}
+\toprule
+Tool and question/purpose & Assistance received & How I checked it\\
+\midrule
+&&\\[0.35in]
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\newpage
+\section*{5. From evidence to an independently authored memo}
+Before leaving class, record your own short claim, supporting evidence, and a limitation. Submit the inquiry packet and save the default and sensitivity evidence bundles.
+\begin{center}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{1.05in}Y}
+\toprule
+Claim & \\[0.45in]
+Evidence & \\[0.45in]
+Limitation & \\[0.45in]
+Next information needed & \\[0.45in]
+\bottomrule
+\end{tabularx}
+\end{center}
+\textbf{Final individual product (typed).}
+\begin{itemize}[nosep]
+\item A memo of at most \textbf{two pages}, using the draft Army-style memo provided by the instructor, addressed to the notional maintenance officer. Include a clear bottom line, a comparison, one labeled figure/table, a limitation, and what could change the recommendation. Explain results in language a nontechnical leader can use.
+\item A technical annex of at most \textbf{three pages}. Define the state vector and matrix convention; show the data-to-matrix construction and one hand calculation; explain the matrix-power and eigenvalue methods; document a numerical verification, the baseline holdout check, and sensitivity results with run IDs. Provide enough detail for a technical reader to reproduce the conclusion.
+\item Document sources, classroom assistance, and AI use. The inquiry packet and computational evidence are supporting materials, outside the five-page writing limit.
+\end{itemize}
+\textbf{AI boundary.} AI assistance is permitted only during the designated classroom inquiry. The final memo and annex must be independently authored: no generative AI outlining, drafting, rewriting, editing, or caption generation, and no copied AI prose from class. The supplied notebook and its numerical/graphical outputs remain permitted during report preparation. Ordinary formatting and non-generative spell-check are permitted.
+\textbf{Do not attach the notebook's evidence record as a substitute for your technical explanation.}
+
+Include this acknowledgment:
+\begin{quote}
+I have documented the assistance received during the classroom inquiry. I independently authored the memo and technical annex without generative AI assistance and did not copy AI-generated prose into them.
+\end{quote}
+\textbf{Strong work demonstrates:} correct linear-algebra representation; contextual interpretation; evaluation of alternatives; verification and appropriately limited validation claims; sensitivity to assumptions; clear communication to both audiences. A well-supported conditional recommendation is preferable to unwarranted certainty.
+
+Due: \underline{\hspace{1.5in}}\quad Submission method: \underline{\hspace{2in}}
+\end{document}

@@ -1,3 +1,5 @@
+import {showFlow, setFlowDirty, clearFlow} from './flow-rail.mjs';
+
 const form = document.querySelector('#fleet-form');
 const loadButton = document.querySelector('#load-calculator');
 const runButton = document.querySelector('#run-analysis');
@@ -37,6 +39,7 @@ function failWorker() {
   defaults = null;
   latest = null;
   evidence.replaceChildren();
+  clearFlow();
   document.querySelector('#evidence-download').hidden = true;
   resultNote.textContent = 'No active result. Reload the calculator and run again.';
   busy = false;
@@ -120,13 +123,14 @@ loadButton.addEventListener('click', async () => {
   }
 });
 
-form.addEventListener('input', () => { updateEffects(); dirty = true; note(); });
+form.addEventListener('input', () => { updateEffects(); dirty = true; note(); setFlowDirty(true); });
 form.addEventListener('submit', async event => {
   event.preventDefault();
   if (busy || !defaults) return;
   busy = true;
   latest = null;
   evidence.replaceChildren();
+  clearFlow();
   document.querySelector('#evidence-download').hidden = true;
   resultNote.textContent = 'Calculating…';
   controls();
@@ -139,6 +143,7 @@ form.addEventListener('submit', async event => {
     const parsed = new DOMParser().parseFromString(output.html, 'text/html');
     const report = parsed.querySelector('.or-evidence');
     evidence.replaceChildren(document.importNode(report, true));
+    showFlow(latest);
     note();
     message(`Analysis complete. ${output.historyCount} successful run${output.historyCount === 1 ? '' : 's'} in this session. Save your evidence before closing.`);
   } catch (error) {
@@ -153,6 +158,7 @@ resetButton.addEventListener('click', () => {
   setDefaults();
   dirty = Boolean(latest);
   note();
+  setFlowDirty(dirty);
   message('Default inputs restored. Select Run analysis to calculate them. Session history is retained.');
 });
 exportButton.addEventListener('click', async () => {

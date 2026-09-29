@@ -259,13 +259,94 @@ def ready_svg(record):
     svg.append(f'<text x="{left+plotw/2}" y="{height-8}" text-anchor="middle" font-size="13">Weeks from implementation</text>')
     svg.append(f'<text x="17" y="{top+ploth/2}" transform="rotate(-90 17 {top+ploth/2})" text-anchor="middle" font-size="13">Expected ready vehicles</text>')
     svg.append(f'<line x1="{left}" x2="{left+plotw}" y1="{sy(target)}" y2="{sy(target)}" stroke="#a33" stroke-dasharray="4,4"/>')
+    svg.append(f'<text x="{left+plotw-5}" y="{max(top+13,sy(target)-6)}" text-anchor="end" fill="#923f32" font-size="12">Target {target:g}</text>')
     for j,(name,res) in enumerate(record["results"].items()):
         color=["#54616d","#693091","#006678"][j]
         points=" ".join(f"{sx(k):.2f},{sy(x[0]):.2f}" for k,x in enumerate(res["path"]))
-        svg.append(f'<polyline points="{points}" fill="none" stroke="{color}" stroke-width="3"/>')
+        dash=['',' stroke-dasharray="9,5"',' stroke-dasharray="2,5"'][j]
+        svg.append(f'<polyline points="{points}" fill="none" stroke="{color}" stroke-width="3"{dash}/>')
+        svg.append(f'<circle cx="{sx(record["inputs"]["deadline"])}" cy="{sy(res["deadline_state"][0])}" r="5" fill="{color}" stroke="white" stroke-width="1.5"/>')
         svg.append(f'<text x="{left+j*245}" y="{height-28}" fill="{color}" font-size="13">{html.escape(name)}</text>')
     k=record["inputs"]["deadline"]
     svg.append(f'<line x1="{sx(k)}" x2="{sx(k)}" y1="{top}" y2="{top+ploth}" stroke="#444" stroke-dasharray="2,4"/>')
+    label_x=min(left+plotw-5,sx(k)+6)
+    anchor="end" if label_x>left+plotw-100 else "start"
+    svg.append(f'<text x="{label_x}" y="{top+13}" text-anchor="{anchor}" font-size="12">Week {k} deadline</text>')
+    svg.append("</svg>")
+    return "".join(svg)
+
+def decision_svg(record):
+    """Compare expected ready counts at the selected decision deadline."""
+    width,height=820,240
+    left,right,top=155,110,35
+    plotw=width-left-right
+    inp=record["inputs"]
+    target=inp["expected_ready_target"]
+    values=[(name,res["deadline_state"][0]) for name,res in record["results"].items()]
+    cap=max(sum(inp["initial_fleet"]),target,max(value for _,value in values),1)
+    sx=lambda value:left+value/cap*plotw
+    svg=[f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" aria-label="Expected ready vehicles at week {inp["deadline"]} compared with the target">']
+    svg.append('<rect width="100%" height="100%" fill="white"/>')
+    svg.append(f'<text x="{left}" y="20" fill="#172534" font-size="14">Expected ready vehicles at week {inp["deadline"]}</text>')
+    tx=sx(target)
+    svg.append(f'<line x1="{tx:.2f}" x2="{tx:.2f}" y1="29" y2="202" stroke="#a33" stroke-width="2" stroke-dasharray="5,4"/>')
+    svg.append(f'<text x="{min(tx+6,width-95):.2f}" y="43" fill="#923f32" font-size="12">Target {target:g}</text>')
+    colors=["#54616d","#693091","#006678"]
+    for j,(name,value) in enumerate(values):
+        y=70+j*55
+        svg.append(f'<text x="{left-10}" y="{y+16}" text-anchor="end" fill="#172534" font-size="13">{html.escape(name)}</text>')
+        svg.append(f'<rect x="{left}" y="{y}" width="{max(0,sx(value)-left):.2f}" height="23" rx="2" fill="{colors[j]}"/>')
+        svg.append(f'<text x="{min(sx(value)+7,width-right+8):.2f}" y="{y+17}" fill="#172534" font-size="13">{value:.3f}</text>')
+    svg.append(f'<text x="{left}" y="225" fill="#43576a" font-size="12">Expected counts, not guaranteed actual vehicles</text>')
+    svg.append("</svg>")
+    return "".join(svg)
+
+def sensitivity_svg(record):
+    """Sweep each proposal's assumed effect while other inputs remain fixed."""
+    width,height=820,370
+    left,right,top,bottom=65,25,25,80
+    plotw,ploth=width-left-right,height-top-bottom
+    inp=record["inputs"]
+    initial=np.array(inp["initial_fleet"],dtype=float)
+    counts=np.array(inp["counts"],dtype=float)
+    base=counts_to_matrix(counts)
+    target=inp["expected_ready_target"]
+    total=float(initial.sum())
+    proposals=[("Prevention",np.array(DATA["proposed_prevention"],dtype=float),
+                inp["prevention_effect_percent"],"#693091"),
+               ("Faster repairs",np.array(DATA["proposed_repair"],dtype=float),
+                inp["repair_effect_percent"],"#006678")]
+    def ready_at(proposal,f):
+        a=base+f/100*(proposal-base)
+        return float((np.linalg.matrix_power(a,inp["deadline"])@initial)[0])
+    curves=[(name,proposal,effect,color,
+             [ready_at(proposal,f) for f in range(0,101,5)])
+            for name,proposal,effect,color in proposals]
+    ymax=max(total,target,*(max(values) for *_,values in curves),1)
+    sx=lambda f:left+f/100*plotw
+    sy=lambda value:top+(1-value/ymax)*ploth
+    svg=[f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" aria-label="Week {inp["deadline"]} expected readiness as proposal effectiveness ranges from 0 to 100 percent">']
+    svg.append('<rect width="100%" height="100%" fill="white"/>')
+    for tick in [0,25,50,75,100]:
+        x=sx(tick)
+        svg.append(f'<line x1="{x}" x2="{x}" y1="{top}" y2="{top+ploth}" stroke="#e4e8ed"/>')
+        svg.append(f'<text x="{x}" y="{top+ploth+20}" text-anchor="middle" fill="#43576a" font-size="12">{tick}%</text>')
+    for y in np.linspace(0,ymax,5):
+        yy=sy(y)
+        svg.append(f'<line x1="{left}" x2="{left+plotw}" y1="{yy}" y2="{yy}" stroke="#e4e8ed"/>')
+        svg.append(f'<text x="{left-7}" y="{yy+4}" text-anchor="end" fill="#43576a" font-size="12">{y:.0f}</text>')
+    svg.append(f'<line x1="{left}" x2="{left+plotw}" y1="{sy(target)}" y2="{sy(target)}" stroke="#a33" stroke-dasharray="5,4" stroke-width="2"/>')
+    svg.append(f'<text x="{left+plotw-5}" y="{max(top+13,sy(target)-6)}" text-anchor="end" fill="#923f32" font-size="12">Target {target:g}</text>')
+    for name,proposal,effect,color,values in curves:
+        points=" ".join(f"{sx(f):.2f},{sy(value):.2f}" for f,value in zip(range(0,101,5),values))
+        svg.append(f'<polyline points="{points}" fill="none" stroke="{color}" stroke-width="3"/>')
+        actual=ready_at(proposal,effect)
+        svg.append(f'<circle cx="{sx(effect):.2f}" cy="{sy(actual):.2f}" r="6" fill="white" stroke="{color}" stroke-width="3"/>')
+    svg.append(f'<text x="{left+plotw/2}" y="{height-28}" text-anchor="middle" fill="#172534" font-size="13">Assumed proposal effectiveness</text>')
+    svg.append(f'<text x="17" y="{top+ploth/2}" transform="rotate(-90 17 {top+ploth/2})" text-anchor="middle" fill="#172534" font-size="13">Expected ready at deadline</text>')
+    svg.append('<text x="80" y="358" fill="#693091" font-size="12">━━ Prevention</text>')
+    svg.append('<text x="325" y="358" fill="#006678" font-size="12">━━ Faster repairs</text>')
+    svg.append('<text x="590" y="358" fill="#43576a" font-size="12">○ Current setting</text>')
     svg.append("</svg>")
     return "".join(svg)
 
@@ -287,8 +368,15 @@ def report_html(record):
           "No convergence established" if res["limiting_state"] is None else f'{res["limiting_state"][0]:.3f}']
          for name,res in r.items()]))
     parts.append('<p>*Long-term limits assume unchanged rates. Meeting an expected-count target is not a probability guarantee.</p>')
+    parts.append('<h2>Decision at the selected deadline</h2>')
+    parts.append(decision_svg(record))
+    parts.append('<p>Bars show expected ready vehicles; the dashed line is the planning target. This is not a probability of meeting the target.</p>')
+    parts.append('<h2>How the forecast changes by week</h2>')
     parts.append(ready_svg(record))
-    parts.append('<p>Red dashed line: expected-ready target. Vertical dotted line: selected deadline.</p>')
+    parts.append('<p>Red dashed line: expected-ready target. Vertical dotted line and circles: selected deadline. Line color and pattern identify each policy.</p>')
+    parts.append('<h2>How the decision depends on assumed effectiveness</h2>')
+    parts.append(sensitivity_svg(record))
+    parts.append('<p>Each curve varies one proposal from no effect (0%) to its full assumed effect (100%), holding the starting fleet, deadline, and target fixed. Circles mark this run\'s effect settings. This sweep is a sensitivity test, not a confidence interval or a probability of success.</p>')
     for name,res in r.items():
         parts.append('<h2>'+html.escape(name)+'</h2>')
         parts.append('<div class="vector-card">Deadline state '+vector_symbol('x',inp['deadline'])+' = '+column_vector([f'{z:.3f}' for z in res['deadline_state']])+'</div>')

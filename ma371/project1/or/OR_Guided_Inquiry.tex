@@ -11,7 +11,7 @@
 \newcommand{\spacefor}[1]{\vspace{#1}}
 \pagestyle{fancy}
 \fancyhf{}
-\lhead{MA371 --- Project 1 OR Pilot}
+\lhead{MA371: Project 1 OR Pilot}
 \rhead{AY27-1}
 \cfoot{\thepage}
 \setlength{\headheight}{14pt}
@@ -52,7 +52,7 @@ Major &5&10&50\\
 \end{center}
 Each origin column contains 100 observations; there are 300 records in total. These are \emph{not} the current fleet counts.
 \begin{enumerate}[label=(\alph*),resume,nosep]
-\item Write the state vector $\bm{x}_k$, including the meaning and units of each coordinate.
+\item Write the state vector $\vec{x}_k$, including the meaning and units of each coordinate.
 \spacefor{0.45in}
 \item Identify one assumption needed to apply these pooled observations to the current fleet. Why might it fail?
 \spacefor{0.45in}
@@ -62,8 +62,8 @@ Each origin column contains 100 observations; there are 300 records in total. Th
 \section*{2. Translate the case into linear algebra}
 Use the column-vector convention
 \[
-\underbrace{\bm{x}_{k+1}}_{3\times1}
-=\underbrace{A}_{3\times3}\underbrace{\bm{x}_k}_{3\times1},
+\underbrace{\vec{x}_{k+1}}_{3\times1}
+=\underbrace{A}_{3\times3}\underbrace{\vec{x}_k}_{3\times1},
 \qquad
 a_{ij}=\frac{\text{transitions from origin }j\text{ to destination }i}
 {\text{all observed transitions from origin }j}.
@@ -73,7 +73,7 @@ a_{ij}=\frac{\text{transitions from origin }j\text{ to destination }i}
 \spacefor{0.45in}
 \item Construct the whole baseline matrix $A_0$. What should each column sum to? Why?
 \spacefor{0.65in}
-\item Calculate $\bm{x}_1=A_0(30,40,30)^T$ by hand. Show a dot product for its ready coordinate. Check the total.
+\item Calculate $\vec{x}_1=A_0(30,40,30)^T$ by hand. Show a dot product for its ready coordinate. Check the total.
 \spacefor{0.75in}
 \end{enumerate}
 The proposals supply the following \textbf{planning estimates}, not observed intervention results:
@@ -91,14 +91,14 @@ Rates are assumed constant; effects begin immediately; states are exclusive and 
 \end{enumerate}
 
 \newpage
-\section*{3. Use the notebook as an analytical instrument}
-Open \texttt{OR\_Fleet\_Readiness.ipynb} using the instructor's link. Run its cells unchanged to display the controls. Keep the supplied transition counts, initial fleet, deadline, and target for your first run. Click \textbf{Run analysis}. Coding is not required.
+\section*{3. Use the calculator as an analytical instrument}
+Open the OR pilot webpage and click \textbf{Load calculator}. Keep the supplied transition counts, initial fleet, deadline, and target for your first run. Click \textbf{Run analysis}. Coding is not required. The notebook \texttt{OR\_Fleet\_Readiness.ipynb} remains a fallback; run its cells unchanged if using it.
 
 \textbf{Tools and meanings.}
 \begin{itemize}[nosep]
-\item $\bm{x}_k=A^k\bm{x}_0$ describes the finite-horizon forecast. Repeated multiplication gives the same forecast.
-\item If $A=PDP^{-1}$, then $A^k=PD^kP^{-1}$: the eigenvalues describe how eigenvector modes change with time.
-\item A normalized eigenvector $\bm{p}$ satisfying $A\bm{p}=\bm{p}$ and $\sum_i p_i=1$ is a stationary distribution. For these default matrices, the other eigenvalues have magnitude below 1, so the model approaches this distribution.
+\item $\vec{x}_k=A^k\vec{x}_0$ describes the finite-horizon forecast. Repeated multiplication gives the same forecast.
+\item If $A=PDP^{-1}$, then $A^k=PD^kP^{-1}$: the eigenvalues describe how eigenvector modes change with time, with $A\vec{v}_i=\lambda_i\vec{v}_i$.
+\item A normalized eigenvector $\vec{p}$ satisfying $A\vec{p}=\vec{p}$ and $\sum_i p_i=1$ is a stationary distribution. For these default matrices, the other eigenvalues have magnitude below 1, so the model approaches this distribution.
 \item A numerical residual checks a calculation. It does not establish that the model represents actual fleet behavior.
 \end{itemize}
 \begin{center}
@@ -185,8 +185,8 @@ Next information needed & \\[0.45in]
 \item A technical annex of at most \textbf{three pages}. Define the state vector and matrix convention; show the data-to-matrix construction and one hand calculation; explain the matrix-power and eigenvalue methods; document a numerical verification, the baseline holdout check, and sensitivity results with run IDs. Provide enough detail for a technical reader to reproduce the conclusion.
 \item Document sources, classroom assistance, and AI use. The inquiry packet and computational evidence are supporting materials, outside the five-page writing limit.
 \end{itemize}
-\textbf{AI boundary.} AI assistance is permitted only during the designated classroom inquiry. The final memo and annex must be independently authored: no generative AI outlining, drafting, rewriting, editing, or caption generation, and no copied AI prose from class. The supplied notebook and its numerical/graphical outputs remain permitted during report preparation. Ordinary formatting and non-generative spell-check are permitted.
-\textbf{Do not attach the notebook's evidence record as a substitute for your technical explanation.}
+\textbf{AI boundary.} AI assistance is permitted only during the designated classroom inquiry. The final memo and annex must be independently authored: no generative AI outlining, drafting, rewriting, editing, or caption generation, and no copied AI prose from class. The supplied calculator and notebook and their numerical/graphical outputs remain permitted during report preparation. Ordinary formatting and non-generative spell-check are permitted.
+\textbf{Do not attach the computational evidence record as a substitute for your technical explanation.}
 
 Include this acknowledgment:
 \begin{quote}
@@ -196,3 +196,4 @@ I have documented the assistance received during the classroom inquiry. I indepe
 
 Due: \underline{\hspace{1.5in}}\quad Submission method: \underline{\hspace{2in}}
 \end{document}
+

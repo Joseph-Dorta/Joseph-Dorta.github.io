@@ -118,7 +118,8 @@ try {
     button.addEventListener('click', () => draw(button.dataset.origin, matrix))
   );
   draw('all', matrix);
-  svg.hidden = false;
+  // SVGElement.hidden is not reflected consistently; remove the attribute itself.
+  svg.removeAttribute('hidden');
   fallback.hidden = true;
 } catch (error) {
   caption.textContent = 'The diagram is unavailable. The contribution check below gives the same one-week forecast.';

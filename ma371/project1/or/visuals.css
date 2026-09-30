@@ -20,9 +20,9 @@
 .transition-diagram button{font:inherit;padding:.3rem .6rem;border:1px solid var(--accent);color:var(--accent);background:#fff;cursor:pointer;border-radius:3px}
 .transition-diagram button[aria-pressed=true]{background:var(--accent);color:#fff}
 .transition-diagram svg{display:block;width:100%;max-width:600px;max-height:260px;background:#fff;border:1px solid #d5e1e8}
+.transition-diagram svg[hidden]{display:none}
 .transition-diagram .diagram-values{font-weight:600}
 .transition-diagram .diagram-caption{font-size:.9rem;color:var(--muted)}
 @media(min-width:1260px){main.compact .fleet-flow{position:fixed;right:12px;top:68px;width:205px;max-height:calc(100vh - 80px);overflow-y:auto;z-index:4;margin:0;padding:.75rem}}
 @media(max-width:650px){.fleet-flow{max-width:none}.transition-diagram{padding:.8rem}}
 @media print{.fleet-flow{display:none!important}.transition-diagram button{display:none}.transition-diagram{break-inside:avoid}}
-

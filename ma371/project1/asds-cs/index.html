@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>One Link Many Paths | MA371 ASDS and Computer Science</title>
+  <meta name="description" content="A guided PageRank inquiry with a directed-link manipulative, staged Python calculations, and a click-data validation extension.">
+  <link rel="stylesheet" href="../../../assets/style.css"><link rel="stylesheet" href="../../../assets/theme.css"><link rel="stylesheet" href="pagerank.css">
+  <script src="../../../assets/theme.js"></script><script type="module" src="pagerank-lab.mjs"></script><link rel="icon" href="../../../assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header"><div class="wrap"><a class="brand" href="../../../">Joseph Dorta</a><nav aria-label="Main"><a href="../../">MA371</a><a href="../">Project 1</a></nav></div></header>
+<main id="main" class="wrap pagerank-page">
+  <p class="breadcrumbs"><a href="../">Project 1</a> / Applied Data Science and Computer Science</p>
+  <p class="eyebrow">Applied Data Science + Computer Science · Project 1</p>
+  <h1>One Link, Many Paths</h1>
+  <p class="lead">Which single navigation link should a training portal add to make its Reference Card easier to find?</p>
+  <figure class="hero-art"><img src="pagerank-wayfinding.webp" width="2036" height="772" alt="Artistic field-guide pages connected by colored routes toward a reference card." fetchpriority="high"><figcaption>Original thematic illustration. It does not encode the five-page case; use the interactive graph for the actual links.</figcaption></figure>
+  <p>This shared track turns directed links into a PageRank model, then asks whether held-out click behavior supports its assumptions. <strong>Option 1</strong> adds Home → Reference Card; <strong>Option 2</strong> adds Planning Guide → Reference Card. Exactly one link may be added. All pages and click records are synthetic.</p>
+  <div class="actions"><a class="button" href="#lab">Open PageRank laboratory</a><a class="button secondary" href="inquiry.html">Read guided inquiry</a></div>
+  <section class="note" aria-label="Teaching case boundary"><p><strong>Model boundary:</strong> a PageRank share is a result of an assumed navigation rule. It is not a measured share of cadets, a content-quality score, or evidence that anyone learned from a page. Do not enter real portal logs or sensitive information.</p></section>
+  <section aria-labelledby="rhythm-title"><h2 id="rhythm-title">Start with a prediction</h2><ol><li>Read the <a href="inquiry.html">guided inquiry</a>, then draw the five-page network before loading it.</li><li>Build the adjacency matrix and predict an origin column of the link-following matrix.</li><li>Advance one probability distribution before asking for its stationary ranking.</li><li>Run the baseline and each option separately. Save their exact-input snapshots.</li><li>Challenge the equal-click assumption with held-out observations. The optional ASDS extension lets you test hypothetical click shares for the new links.</li></ol></section>
+
+  <section id="lab" class="pagerank-lab" aria-labelledby="lab-title">
+    <h2 id="lab-title">PageRank laboratory</h2>
+    <p>Each action answers one question. The graph, matrices, and numerical results share the same unrounded data; changing a link or the continuation probability marks older results out of date.</p>
+    <p class="lab-status" id="lab-status" role="status" aria-live="polite">Five labeled pages are ready with no links. Add arrows yourself or load the case.</p>
+    <noscript><p>This laboratory requires JavaScript and browser Python. Use the printable inquiry packet if either is unavailable.</p></noscript>
+
+    <section class="lab-step" id="build" aria-labelledby="build-title">
+      <p class="step-number">01 · Represent</p><h3 id="build-title">Build a directed network</h3>
+      <p>Select an <strong>origin</strong> page, then a <strong>destination</strong> to toggle an arrow. You can also toggle a matrix cell. Rows are destinations; columns are origins. Adding H → P does not add P → H.</p>
+      <div class="lab-controls"><button type="button" class="button secondary" id="load-example">Load three-page example</button><button type="button" class="button" id="load-baseline">Load five-page baseline</button><button type="button" class="button secondary" id="clear-links">Clear links</button></div>
+      <div class="build-grid"><div class="visual-panel"><div class="panel-heading"><h4>Directed graph</h4><p id="graph-summary">5 pages · 0 links</p></div><svg id="graph-svg" viewBox="0 0 680 460" role="img" aria-label="Five labeled pages and no arrows"></svg><p class="graph-instruction" id="graph-instruction">Choose an origin card, then a destination card. Select the same card twice to cancel.</p><p class="small">The layout is illustrative; only arrows and matrix entries affect the model.</p></div><div class="matrix-panel"><div class="panel-heading"><h4>Adjacency matrix A</h4><p>Destination rows × origin columns</p></div><div class="matrix-scroll" id="matrix-editor"></div><p id="link-list" class="link-list">Links: none.</p><p class="small">A dangling page has no outgoing arrows. The next stage shows how we handle its zero column.</p></div></div>
+    </section>
+
+    <section class="lab-step" id="transition-step" aria-labelledby="transition-title">
+      <p class="step-number">02 · Normalize</p><h3 id="transition-title">Turn arrows into link-following probabilities</h3>
+      <p><strong>Predict:</strong> in the baseline, H has three outgoing links. What are the nonzero entries of its column of T? A dangling column is replaced by a uniform distribution so that probability is conserved.</p>
+      <button type="button" class="button" id="calculate-transition">Construct T with Python</button><div id="transition-result" class="step-result" aria-live="polite"><p>No transition calculation yet.</p></div>
+      <details class="code-view"><summary>What Python just did · Normalize columns</summary><pre id="code-transition">Python source will appear here.</pre></details>
+    </section>
+
+    <section class="lab-step" id="google-step" aria-labelledby="google-title">
+      <p class="step-number">03 · Add restarts</p><h3 id="google-title">Build the random-surfer update</h3>
+      <p>With continuation probability α, a visitor follows one link with probability α and restarts uniformly with probability 1 − α. The model is G = αT + (1 − α)𝐮𝟏ᵀ, where 𝐮 is the uniform column vector. Bold symbols denote vectors.</p>
+      <div class="lab-controls"><label for="alpha-range">Continuation probability α <span id="alpha-value">0.85</span><input id="alpha-range" type="range" min="0.50" max="0.99" step="0.01" value="0.85"></label><button type="button" class="button" id="calculate-google">Construct G with Python</button></div>
+      <div id="google-result" class="step-result" aria-live="polite"><p>No random-surfer calculation yet.</p></div><details class="code-view"><summary>What Python just did · Add restarts</summary><pre id="code-google">Python source will appear here.</pre></details>
+    </section>
+
+    <section class="lab-step" id="stepper" aria-labelledby="stepper-title">
+      <p class="step-number">04 · Advance</p><h3 id="stepper-title">Move probability mass one step at a time</h3>
+      <p>Choose a starting distribution. Each destination bar separates the mass arriving by links from the mass arriving by restart. These are modeled probabilities, not simulated or observed individual visitors.</p>
+      <div class="lab-controls"><label for="start-page">Starting distribution<select id="start-page"><option value="uniform">Uniform on all pages</option></select></label><button type="button" class="button secondary" id="reset-state">Set 𝐩₀</button><button type="button" class="button" id="advance-one">Advance one step</button><button type="button" class="button secondary" id="advance-five">Advance five steps</button></div>
+      <p id="step-caption" class="small">Set 𝐩₀, then predict the next distribution.</p><div id="flow-bars" class="flow-bars" aria-live="polite"></div><div id="step-result" class="step-result"><p>No navigation step yet.</p></div>
+      <div class="flow-key"><span><i class="swatch follow"></i>Follow links</span><span><i class="swatch restart"></i>Uniform restart</span></div><details class="code-view"><summary>What Python just did · Advance a distribution</summary><pre id="code-step">Python source will appear here.</pre></details>
+    </section>
+
+    <section class="lab-step" id="rank-step" aria-labelledby="rank-title">
+      <p class="step-number">05 · Interpret</p><h3 id="rank-title">Find and audit the stationary ranking</h3>
+      <p><strong>Predict:</strong> how will this result differ from 𝐩₁? Python iterates to a stationary vector 𝐩* and checks G𝐩* ≈ 𝐩*. Eigenvalue 1 is the connection to Lessons 17–19; a small residual checks arithmetic, not user behavior.</p>
+      <button type="button" class="button" id="calculate-stationary">Find stationary vector with Python</button><div id="stationary-result" class="step-result" aria-live="polite"><p>No stationary calculation yet.</p></div>
+      <div class="lab-controls"><button type="button" class="button secondary" id="load-option1">Load Option 1: H → R</button><button type="button" class="button secondary" id="load-option2">Load Option 2: P → R</button><button type="button" class="button secondary" id="restore-baseline">Restore baseline</button></div>
+      <p class="small">Loading an option changes only its proposed link; it does not calculate a ranking. Predict first, then run the stationary calculation. Earlier completed runs remain in the comparison table with their exact link snapshots.</p>
+      <div class="history-wrap"><h4>Saved model runs</h4><div class="table-scroll"><table id="run-table"><thead><tr><th scope="col">Scenario</th><th scope="col">α</th><th scope="col">R share</th><th scope="col">Other page shares H, P, S, E</th><th scope="col">Check</th></tr></thead><tbody><tr><td colspan="5">No completed run yet.</td></tr></tbody></table></div></div>
+      <details class="code-view"><summary>What Python just did · Stationary iteration</summary><pre id="code-stationary">Python source will appear here.</pre></details>
+    </section>
+
+    <section class="lab-step" id="validation-step" aria-labelledby="validation-title">
+      <p class="step-number">06 · Validate</p><h3 id="validation-title">Check the equal-click assumption</h3>
+      <p>These synthetic held-out click events come from the <strong>baseline</strong> site, before either new link exists. Each origin row contains 100 events, not necessarily 100 distinct cadets. The counts below are editable for a hypothetical test; restore them to return to the supplied observations.</p>
+      <div class="table-scroll"><table id="click-table"><caption>Next page reached from each observed origin</caption><thead><tr><th scope="col">Origin \ destination</th><th scope="col">H</th><th scope="col">P</th><th scope="col">S</th><th scope="col">E</th><th scope="col">R</th><th scope="col">Total</th></tr></thead><tbody></tbody></table></div>
+      <div class="lab-controls"><label for="observed-origin">Inspect origin<select id="observed-origin"><option value="H">H · Home</option><option value="P">P · Planning Guide</option><option value="E">E · Worked Examples</option></select></label><button type="button" class="button" id="analyze-clicks">Compare observed and equal-link columns</button><button type="button" class="button secondary" id="restore-clicks">Restore supplied counts</button></div>
+      <div id="validation-result" class="step-result" aria-live="polite"><p>No click comparison yet.</p></div><p class="small">A discrepancy can challenge the baseline model. These clicks cannot tell us how often an unbuilt link would be selected.</p>
+    </section>
+
+    <section class="lab-step extension" id="extension-step" aria-labelledby="extension-title">
+      <p class="step-number">07 · Optional ASDS extension</p><h3 id="extension-title">Test a partial click-weighted model</h3>
+      <p>Use observed proportions for the old links from H, P, and E. For S and R, keep the equal-link rule because their click records are missing. This <strong>hybrid model</strong> is a sensitivity analysis, not a fully validated empirical PageRank model.</p>
+      <button type="button" class="button" id="build-hybrid">Build hybrid baseline with Python</button><div id="hybrid-result" class="step-result" aria-live="polite"><p>No hybrid baseline yet.</p></div>
+      <p>Neither proposed link has click data. Set a <em>hypothetical</em> share for each new link; the remaining click share is divided among that origin's old links in its observed proportions. Try equal shares first, then a case that might reverse the comparison.</p>
+      <div class="lab-controls"><label for="q1-range">Option 1 new-link share q₁ <span id="q1-value">0.10</span><input id="q1-range" type="range" min="0" max="0.50" step="0.01" value="0.10"></label><label for="q2-range">Option 2 new-link share q₂ <span id="q2-value">0.10</span><input id="q2-range" type="range" min="0" max="0.50" step="0.01" value="0.10"></label><button type="button" class="button" id="compare-hybrid">Compare hybrid scenarios with Python</button></div>
+      <div id="hybrid-options-result" class="step-result" aria-live="polite"><p>No hypothetical-link comparison yet.</p></div>
+      <div class="assessment"><h4>Questions for your ASDS assessment</h4><ol><li>Which columns use observed counts, and which still rely on an equal-link assumption? Why does that distinction matter?</li><li>Record q₁ and q₂ for one run where the favored option changes, if you can find one. What remains unknown about those values?</li><li>Does fitting the baseline clicks prove either proposed link will improve actual discoverability? Name a measurable outcome and a comparison that would test the change.</li></ol></div>
+      <details class="code-view"><summary>What Python just did · Hybrid model</summary><pre id="code-hybrid">Python source will appear here.</pre></details>
+    </section>
+    <div class="actions"><button type="button" class="button" id="export-evidence" disabled>Export completed evidence</button></div><p class="small">The export records completed runs with their exact inputs, not changes left unrun. Browser Python and NumPy download on the first calculation; internet access is required. Your graph and hypothetical counts remain in this browser.</p>
+  </section>
+
+  <section aria-labelledby="materials-title"><h2 id="materials-title">Student materials</h2><ul><li><a href="inquiry.html">Read or print the guided inquiry</a>.</li><li><a href="Project1_ASDS_CS_Guided_Inquiry.tex" download>Download the revised LaTeX inquiry source</a>.</li><li><a href="ASDS_CS_PageRank_Memo_Template.docx" download>Download the Army-style memo template</a>; replace every bracketed prompt with your own writing.</li><li><a href="pagerank_data.json" download>Download the synthetic case data</a>.</li><li><a href="pagerank_model.py" download>Download the Python source</a> to inspect the complete calculations.</li></ul></section>
+  <section aria-labelledby="submit-title"><h2 id="submit-title">What you will submit</h2><p>Complete the classroom inquiry, then independently write an Army-style memo of at most two pages. Attach a separate technical annex of at most three pages showing the link-to-matrix construction, one-step and stationary interpretation, comparison of options, and a critique based on held-out clicks and sensitivity. The optional hybrid analysis may strengthen the ASDS portion; it does not substitute for the core model.</p><p>Due date and submission method will be supplied by your instructor.</p></section>
+  <section class="note" aria-labelledby="ai-title"><h2 id="ai-title">AI boundary</h2><p>Approved AI may coach you during the designated classroom inquiry if you document and verify its help. The final memo and annex must be independently authored, without generative AI outlining, drafting, rewriting, editing, or captions. The calculator and its numerical output remain permitted.</p></section>
+</main><footer class="wrap">MA371 · Applied Data Science and Computer Science · Synthetic teaching data only</footer>
+</body></html>

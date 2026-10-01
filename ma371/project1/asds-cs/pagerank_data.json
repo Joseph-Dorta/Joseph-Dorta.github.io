@@ -1,0 +1,22 @@
+{
+  "title": "Synthetic training-resource portal",
+  "order": ["H", "P", "S", "E", "R"],
+  "pages": {
+    "H": "Home",
+    "P": "Planning Guide",
+    "S": "Safety Checklist",
+    "E": "Worked Examples",
+    "R": "Reference Card"
+  },
+  "baseline_links": [["H", "P"], ["H", "S"], ["H", "E"], ["P", "H"], ["P", "E"], ["S", "H"], ["S", "E"], ["E", "P"], ["E", "R"], ["R", "H"]],
+  "options": {
+    "Option 1": ["H", "R"],
+    "Option 2": ["P", "R"]
+  },
+  "held_out_counts": {
+    "H": {"P": 52, "S": 33, "E": 15},
+    "P": {"H": 70, "E": 30},
+    "E": {"P": 25, "R": 75}
+  },
+  "default_alpha": 0.85
+}

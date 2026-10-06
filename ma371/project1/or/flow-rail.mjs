@@ -94,7 +94,7 @@ function draw() {
   if (!result || !result.path[k] || !Number.isInteger(j) || j < 0 || j > 2) return;
   const sourceCount = result.path[k][j];
   const flow = result.matrix.map(row => row[j] * sourceCount);
-  context.textContent = `Last completed run · week ${k} to ${k+1}. ${dirty ? 'Inputs changed; run again to update.' : ''}`;
+  context.textContent = `Completed forecast · week ${k} to ${k+1}. ${dirty ? 'Inputs changed; run again to update.' : ''}`;
   svg.setAttribute('aria-label', `${scenario.value}, week ${k} to ${k+1}, from ${states[j]}: ${flow.map((amount,i)=>`${amount.toFixed(2)} expected to ${states[i]}`).join('; ')}`);
   svg.replaceChildren();
   particles = [];

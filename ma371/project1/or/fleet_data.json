@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "case_id": "MA371_OR_PILOT_V1",
+  "case_id": "MA371_OR_PROJECT1_V1",
   "data_status": "Entirely synthetic teaching data; not operational evidence.",
   "states": [
     "Ready",
@@ -94,4 +94,3 @@
     "Fractional outputs are expected counts, not promises of actual readiness"
   ]
 }
-

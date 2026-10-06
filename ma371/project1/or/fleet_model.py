@@ -1,11 +1,11 @@
-"""MA371 OR pilot calculation engine. Synthetic data; no report-writing or AI API."""
+"""MA371 Operations Research calculation engine. Synthetic teaching data."""
 import numpy as np
 import json, html, hashlib
 from datetime import datetime, timezone
 
 DATA = {
   "schema_version": 1,
-  "case_id": "MA371_OR_PILOT_V1",
+  "case_id": "MA371_OR_PROJECT1_V1",
   "data_status": "Entirely synthetic teaching data; not operational evidence.",
   "states": [
     "Ready",
@@ -443,7 +443,7 @@ def sensitivity_svg(record):
 
 def report_html(record):
     r,inp=record["results"],record["inputs"]
-    parts=['<h1>MA371 OR Pilot: Evidence Record</h1>',
+    parts=['<h1>MA371 Operations Research: Evidence Record</h1>',
         '<p><strong>Entirely synthetic case. This output is evidence, not a recommendation.</strong></p>',
         '<p>Run '+html.escape(record["run_id"])+' | Dataset hash '+record["dataset_sha256"]+'</p>',
         table(["Input","Value"],[(k,vector_symbol('x',0)+' = '+column_vector([f'{z:g}' for z in v])
@@ -496,4 +496,3 @@ def report_html(record):
     parts.append('<p>These records check the baseline prediction only. They do not validate the proposed intervention rates. No confidence intervals, policy-success probabilities, or causal effects are estimated.</p>')
     style=".or-evidence{font:16px/1.65 Arial,sans-serif;max-width:1050px;margin:25px auto;padding:12px;color:#172534;overflow-wrap:anywhere}.or-evidence table{border-collapse:collapse;width:100%;margin:12px 0;display:block;overflow-x:auto}.or-evidence td,.or-evidence th{border:1px solid #bbb;padding:8px;text-align:left;vertical-align:top}.or-evidence th{background:#e8eef3}.or-evidence svg{width:100%;max-width:900px}.or-evidence h1,.or-evidence h2{color:#243f5c}.or-evidence .column-vector{display:inline-flex;flex-direction:column;align-items:center;border-left:2px solid currentColor;border-right:2px solid currentColor;padding:.25rem .75rem;margin:.2rem;vertical-align:middle;white-space:nowrap}.or-evidence .vector-card{display:inline-block;margin:.5rem 1rem .5rem 0}.or-evidence .notation{padding:.75rem;background:#f2f6f9}"
     return '<!doctype html><html><head><meta charset="utf-8"><title>OR evidence record</title><style>'+style+'</style></head><body><div class="or-evidence">'+"".join(parts)+'</div></body></html>'
-

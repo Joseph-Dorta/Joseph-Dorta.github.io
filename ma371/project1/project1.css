@@ -1,0 +1,13 @@
+.project-route{margin:2rem 0;padding:1.35rem 1.5rem;border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--wash)}
+.project-route h2{margin-bottom:.55rem}
+.project-route ol{margin:.4rem 0 .2rem;padding-left:1.35rem;max-width:78ch}
+.project-route li{padding-left:.25rem}
+.project-grid{align-items:stretch}
+.project-grid .card{min-height:23rem}
+.project-field{font-size:.86rem;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);margin-bottom:.25rem}
+.project-grid h3{font-size:1.35rem;margin:.15rem 0 .75rem}
+.project-grid .project-math{font-size:.91rem;font-weight:650;color:var(--muted);margin-top:auto;margin-bottom:1rem}
+.project-links{display:flex;gap:.8rem;align-items:center;flex-wrap:wrap;width:100%}
+.project-links .button{margin-top:0}
+.faculty-link{border-top:1px solid var(--line);padding-top:1rem;margin-top:2rem}
+@media(max-width:650px){.project-route{padding:1rem}.project-grid .card{min-height:0}.project-links{align-items:stretch}.project-links .button{width:100%;text-align:center}}

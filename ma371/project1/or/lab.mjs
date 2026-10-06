@@ -1,22 +1,26 @@
-import {showFlow, setFlowDirty, clearFlow} from './flow-rail.mjs';
+import {showFlow, clearFlow} from './flow-rail.mjs';
 
 const form = document.querySelector('#fleet-form');
 const loadButton = document.querySelector('#load-calculator');
-const runButton = document.querySelector('#run-analysis');
 const exportButton = document.querySelector('#export-evidence');
 const resetButton = document.querySelector('#reset-inputs');
 const status = document.querySelector('#calculator-status');
 const evidence = document.querySelector('#evidence');
+const report = document.querySelector('#full-report');
 const resultNote = document.querySelector('#result-note');
+const steps = ['matrix', 'advance', 'proposals', 'modes', 'holdout', 'sensitivity'];
 const pending = new Map();
-let worker, counter = 0, timer, latest, defaults, dirty = false, busy = false;
+const completed = new Map();
+let worker, counter = 0, timer, latest, defaults, busy = false, dirty = false;
 
-function message(text, error = false) {
-  status.textContent = text;
+function message(value, error = false) {
+  status.textContent = value;
   status.classList.toggle('error', error);
 }
 function controls() {
-  runButton.disabled = !worker || !defaults || busy;
+  for (const [index, step] of steps.entries()) {
+    document.querySelector(`#${step}-button`).disabled = !worker || !defaults || busy || (index > 0 && !completed.has(steps[index - 1]));
+  }
   exportButton.disabled = !latest || busy;
   resetButton.disabled = !defaults || busy;
   for (const input of form.querySelectorAll('input')) input.disabled = busy;
@@ -26,9 +30,9 @@ function request(action, inputs) {
     const id = ++counter;
     const timeout = setTimeout(() => {
       pending.delete(id);
-      reject(new Error('The calculator is taking too long. Reload it or use the Colab fallback.'));
+      reject(new Error('The calculation is taking too long. Reload it or use the Colab fallback.'));
       failWorker();
-    }, action === 'initialize' ? 180000 : 30000);
+    }, action === 'initialize' ? 180000 : 40000);
     pending.set(id, {resolve, reject, timeout});
     worker.postMessage({id, action, inputs});
   });
@@ -38,10 +42,8 @@ function failWorker() {
   worker = null;
   defaults = null;
   latest = null;
-  evidence.replaceChildren();
+  completed.clear();
   clearFlow();
-  document.querySelector('#evidence-download').hidden = true;
-  resultNote.textContent = 'No active result. Reload the calculator and run again.';
   busy = false;
   loadButton.disabled = false;
   loadButton.textContent = 'Reload calculator';
@@ -72,8 +74,8 @@ function updateEffects() {
 }
 function note() {
   resultNote.textContent = latest
-    ? `Displayed run: ${latest.run_id}. ${dirty ? 'Inputs changed since this run; run again to update. Export still saves this completed run.' : 'Results match the current inputs.'}`
-    : 'No result yet. Make your prediction, then select Run analysis.';
+    ? `Last completed six-step run: ${latest.run_id}. ${dirty ? 'Inputs changed; earlier results are marked out of date. Export still saves that completed run.' : 'Results match the current inputs.'}`
+    : 'Work through the six calculations in order. Make a prediction before each one.';
 }
 function number(name) {
   const input = form.elements.namedItem(name);
@@ -83,10 +85,85 @@ function number(name) {
   return input.valueAsNumber;
 }
 function inputs() {
-  return {counts: Array.from({length: 3}, (_, i) => Array.from({length: 3}, (_, j) => number(`count-${i}-${j}`))),
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    throw new Error('Correct the highlighted inputs before calculating.');
+  }
+  return {
+    counts: Array.from({length: 3}, (_, i) => Array.from({length: 3}, (_, j) => number(`count-${i}-${j}`))),
     initial: Array.from({length: 3}, (_, i) => number(`initial-${i}`)),
     deadline: number('deadline'), target: number('target'),
-    prevention_effect: number('prevention'), repair_effect: number('repair')};
+    prevention_effect: number('prevention'), repair_effect: number('repair')
+  };
+}
+const fmt = (value, places = 3) => Number(value).toFixed(places);
+const vec = values => `(${values.map(value => fmt(value)).join(', ')})ᵀ`;
+const matrix = rows => rows.map(row => `[ ${row.map(value => fmt(value, 4)).join('   ')} ]`).join('\n');
+function stageText(step, out, values) {
+  if (step === 'matrix') return `Origin totals: ${out.origin_totals.map(value => fmt(value)).join(', ')} historical vehicle-weeks.\nA₀ (destination rows, origin columns):\n${matrix(out.matrix)}\nColumn sums: ${out.column_sums.map(value => fmt(value, 6)).join(', ')}. Each column is a probability distribution.`;
+  if (step === 'advance') return `Initial state vector: ${vec(out.initial)} vehicles\nWeek-1 state vector = A₀ × initial state = ${vec(out.week_1)} expected vehicles\nWeek-2 state vector = A₀ × week-1 state = ${vec(out.week_2)} expected vehicles\nTotal expected fleet: ${fmt(out.fleet_total)} vehicles at each week.`;
+  if (step === 'proposals') return Object.entries(out.scenarios).map(([name, item]) => `${name}: A =\n${matrix(item.matrix)}\nWeek-${out.deadline} state vector = ${vec(item.deadline_state)}; expected-ready target ${out.target}: ${item.meets_target ? 'met' : 'not met'}.`).join('\n\n') + '\n\nUse the flow diagram below to trace one origin column at a time.';
+  if (step === 'modes') return Object.entries(out.scenarios).map(([name, item]) => `${name}: eigenvalues ${item.eigenvalues.join(', ')}.\nEigenvectors (matching order): ${item.eigenvectors.map(vec => `(${vec.join(', ')})ᵀ`).join('; ')}.\nStationary proportions: ${item.stationary ? vec(item.stationary) : 'not established'}; convergence from arbitrary initial states: ${item.converges ? 'established for this matrix' : 'not established'}.\nEigenpair residual: ${Number(item.eigen_residual).toExponential(2)}.`).join('\n\n') + '\n\nCompare a long-run distribution with the finite-deadline decision above.';
+  if (step === 'holdout') return `Held-out origin counts: ${vec(out.origin_counts)} observed vehicle-weeks.\nPredicted destinations A₀h: ${vec(out.predicted)}.\nObserved destinations: ${vec(out.observed)}.\nObserved minus predicted: ${vec(out.residual)}.\nLargest entrywise difference between training and held-out conditional rates: ${(100*out.max_probability_difference).toFixed(2)} percentage points. This check concerns the baseline rates only.`;
+  if (step === 'sensitivity') return Object.entries(out.scenarios).map(([name, item]) => `${name}: selected ${item.selected_effect_percent}% effect gives ${fmt(item.selected_expected_ready)} expected ready at week ${out.deadline}.\nSweep (effect → expected ready): ${item.curve.map(point => `${point.effect_percent}% → ${fmt(point.expected_ready, 2)}`).join('; ')}.`).join('\n\n') + `\n\nTarget: ${out.target} expected ready. This is a hypothetical effect sweep, not a probability statement.`;
+  return '';
+}
+function invalidate() {
+  completed.clear();
+  for (const step of steps) {
+    const node = document.querySelector(`#${step}-result`);
+    node.className = 'stage-result stale';
+    node.textContent = 'Inputs changed. Recalculate from step 01 to keep every result on the same exact inputs.';
+  }
+  dirty = Boolean(latest);
+  clearFlow();
+  note();
+  controls();
+}
+async function runStep(step) {
+  if (busy || !worker) return;
+  let values;
+  try { values = inputs(); } catch (error) { message(error.message, true); return; }
+  busy = true;
+  controls();
+  message(`Running step ${steps.indexOf(step) + 1} of 6 in browser Python…`);
+  try {
+    const output = await request('stage', {step, values});
+    let final;
+    if (step === 'sensitivity') final = await request('analyze', values);
+    const index = steps.indexOf(step);
+    for (const later of steps.slice(index + 1)) {
+      completed.delete(later);
+      const node = document.querySelector(`#${later}-result`);
+      node.className = 'stage-result stale';
+      node.textContent = 'An earlier calculation changed. Run this step again.';
+    }
+    completed.set(step, {inputs: structuredClone(values), output: output.data});
+    const node = document.querySelector(`#${step}-result`);
+    node.className = 'stage-result current';
+    node.textContent = stageText(step, output.data, values);
+    if (step === 'proposals') showFlow({results: output.data.scenarios});
+    if (final) {
+      latest = final.record;
+      dirty = false;
+      const parsed = new DOMParser().parseFromString(final.html, 'text/html');
+      const full = parsed.querySelector('.or-evidence');
+      evidence.replaceChildren(document.importNode(full, true));
+      report.hidden = false;
+      document.querySelector('#evidence-download').hidden = true;
+      note();
+      message(`Six-step analysis complete. Run ID ${latest.run_id}. Save your evidence before closing.`);
+    } else {
+      note();
+      message(`Step ${index + 1} complete. Interpret its output, then continue to step ${index + 2}.`);
+    }
+  } catch (error) {
+    message(error.message, true);
+    document.querySelector(`#${step}-result`).textContent = 'No new result. Correct the inputs and try again.';
+  } finally {
+    busy = false;
+    controls();
+  }
 }
 
 loadButton.addEventListener('click', async () => {
@@ -105,14 +182,11 @@ loadButton.addEventListener('click', async () => {
       pending.delete(event.data.id);
       event.data.error ? entry.reject(new Error(event.data.error)) : entry.resolve(event.data);
     };
-    worker.onerror = () => {
-      message('Browser Python could not load. Retry or open the Colab fallback below.', true);
-      failWorker();
-    };
+    worker.onerror = () => { failWorker(); message('Browser Python could not load. Retry or open the Colab fallback.', true); };
     defaults = (await request('initialize')).data;
     setDefaults();
     loadButton.textContent = 'Calculator loaded';
-    message('Ready. Predict first; select Run analysis when you are ready to calculate.');
+    message('Ready. Predict the Ready-origin column, then construct A₀.');
   } catch (error) {
     failWorker();
     message(error.message, true);
@@ -122,44 +196,13 @@ loadButton.addEventListener('click', async () => {
     controls();
   }
 });
-
-form.addEventListener('input', () => { updateEffects(); dirty = true; note(); setFlowDirty(true); });
-form.addEventListener('submit', async event => {
-  event.preventDefault();
-  if (busy || !defaults) return;
-  busy = true;
-  latest = null;
-  evidence.replaceChildren();
-  clearFlow();
-  document.querySelector('#evidence-download').hidden = true;
-  resultNote.textContent = 'Calculating…';
-  controls();
-  message('Running the fleet model in your browser…');
-  try {
-    const output = await request('analyze', inputs());
-    latest = output.record;
-    dirty = false;
-    // Model HTML is produced by trusted local Python with escaped, numeric-only input.
-    const parsed = new DOMParser().parseFromString(output.html, 'text/html');
-    const report = parsed.querySelector('.or-evidence');
-    evidence.replaceChildren(document.importNode(report, true));
-    showFlow(latest);
-    note();
-    message(`Analysis complete. ${output.historyCount} successful run${output.historyCount === 1 ? '' : 's'} in this session. Save your evidence before closing.`);
-  } catch (error) {
-    message(error.message, true);
-    resultNote.textContent = 'The inputs did not produce a result. Correct them and run again; export is disabled.';
-  } finally {
-    busy = false;
-    controls();
-  }
-});
+form.addEventListener('submit', event => event.preventDefault());
+form.addEventListener('input', () => { updateEffects(); invalidate(); });
+for (const step of steps) document.querySelector(`#${step}-button`).addEventListener('click', () => runStep(step));
 resetButton.addEventListener('click', () => {
   setDefaults();
-  dirty = Boolean(latest);
-  note();
-  setFlowDirty(dirty);
-  message('Default inputs restored. Select Run analysis to calculate them. Session history is retained.');
+  invalidate();
+  message('Default inputs restored. Begin again with step 01. The last completed export remains available.');
 });
 exportButton.addEventListener('click', async () => {
   if (busy || !latest) return;
@@ -172,10 +215,25 @@ exportButton.addEventListener('click', async () => {
     link.download = `OR_evidence_${output.runId}.zip`;
     link.hidden = false;
     link.click();
-    message(`Evidence ZIP prepared for run ${output.runId}. If the download did not start, select Download prepared evidence ZIP below. Refreshing this page clears session history.`);
+    message(`Evidence ZIP prepared for completed run ${output.runId}. If needed, use the download link below.`);
   } catch (error) { message(error.message, true); }
   finally { busy = false; controls(); }
 });
+for (const detail of document.querySelectorAll('.code-view[data-step]')) {
+  detail.addEventListener('toggle', async () => {
+    const code = detail.querySelector('pre');
+    if (!detail.open || code.dataset.loaded) return;
+    try {
+      const response = await fetch('./fleet_model.py');
+      if (!response.ok) throw new Error('Python source unavailable.');
+      const source = await response.text();
+      const step = detail.dataset.step;
+      const match = source.match(new RegExp(`# WEB_CODE_BEGIN ${step}\\r?\\n([\\s\\S]*?)# WEB_CODE_END ${step}`));
+      code.textContent = match ? match[1].trim() : 'Download the full model source below.';
+      code.dataset.loaded = 'true';
+    } catch (error) { code.textContent = error.message; }
+  });
+}
 document.querySelector('#code-view').addEventListener('toggle', async event => {
   const code = document.querySelector('#model-code');
   if (!event.target.open || code.dataset.loaded) return;

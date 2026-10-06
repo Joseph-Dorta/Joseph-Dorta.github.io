@@ -92,7 +92,7 @@ Rates are assumed constant; effects begin immediately; states are exclusive and 
 
 \newpage
 \section*{3. Use the calculator as an analytical instrument}
-Open the OR pilot webpage and click \textbf{Load calculator}. Keep the supplied transition counts, initial fleet, deadline, and target for your first run. Click \textbf{Run analysis}. Coding is not required. The notebook \texttt{OR\_Fleet\_Readiness.ipynb} remains a fallback; run its cells unchanged if using it.
+Open the OR pilot webpage and click \textbf{Load calculator}. Keep the supplied transition counts, initial fleet, deadline, and target for your first run. Run the six Python steps in order: construct $A_0$, update the fleet, compare proposals, inspect eigenstructure, check held-out data, and test sensitivity. Interpret each result before advancing. Coding is not required. The notebook \texttt{OR\_Fleet\_Readiness.ipynb} remains a fallback; run its cells unchanged if using it.
 
 \textbf{Tools and meanings.}
 \begin{itemize}[nosep]
@@ -120,7 +120,7 @@ Faster repairs &&&&\\[0.3in]
 \item Record one numerical check and its result. What exactly does it verify?
 \spacefor{0.4in}
 \end{enumerate}
-\textbf{Save evidence now.} Click \textbf{Export last run}. Retain the ZIP and its run ID. Exports describe the last completed run, not unrun changes in the controls.
+\textbf{Save evidence now.} Click \textbf{Export completed evidence}. Retain the ZIP and its run ID. Exports describe the last completed six-step run, not unrun changes in the controls.
 
 \newpage
 \section*{4. Challenge the result}

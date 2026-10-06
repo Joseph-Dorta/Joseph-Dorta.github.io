@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+<title id="title">Two thermal modules in a field communications unit</title><desc id="desc">Stylized power and control circuit boards linked by a copper thermal bridge, with cool airflow above the rugged enclosure.</desc>
+<defs><linearGradient id="night" x2="1" y2="1"><stop stop-color="#10293b"/><stop offset=".6" stop-color="#1d4855"/><stop offset="1" stop-color="#35505b"/></linearGradient><linearGradient id="copper" x2="1"><stop stop-color="#8c5344"/><stop offset=".5" stop-color="#eab96d"/><stop offset="1" stop-color="#9a6046"/></linearGradient><linearGradient id="warm" x2="1" y2="1"><stop stop-color="#682f2b"/><stop offset="1" stop-color="#d96740"/></linearGradient><linearGradient id="cool" x2="1" y2="1"><stop stop-color="#14556b"/><stop offset="1" stop-color="#4e9fa7"/></linearGradient><pattern id="mesh" width="30" height="30" patternUnits="userSpaceOnUse"><path d="M0 0h30M0 0v30" fill="none" stroke="#d5e6d3" stroke-opacity=".08"/></pattern><filter id="glow"><feGaussianBlur stdDeviation="15"/></filter></defs>
+<rect width="1200" height="420" fill="url(#night)"/><rect width="1200" height="420" fill="url(#mesh)"/><path d="M0 350Q250 315 510 355T1200 340v80H0Z" fill="#132c35"/>
+<g fill="none" stroke="#8ecad2" stroke-linecap="round" stroke-width="5" opacity=".75"><path d="M260 71c34-24 55-24 89 0s55 24 89 0"/><path d="M459 47c34-24 55-24 89 0s55 24 89 0"/><path d="M661 70c34-24 55-24 89 0s55 24 89 0"/><path d="M861 51c34-24 55-24 89 0s55 24 89 0"/></g>
+<rect x="107" y="112" width="986" height="241" rx="27" fill="#6d8585" stroke="#c4c29f" stroke-width="8"/><rect x="133" y="135" width="934" height="195" rx="12" fill="#183849" stroke="#0a2330" stroke-width="8"/>
+<g fill="#d6c9a1"><circle cx="154" cy="155" r="5"/><circle cx="1046" cy="155" r="5"/><circle cx="154" cy="308" r="5"/><circle cx="1046" cy="308" r="5"/></g>
+<ellipse cx="367" cy="237" rx="180" ry="130" fill="#d55032" opacity=".25" filter="url(#glow)"/><ellipse cx="841" cy="237" rx="160" ry="120" fill="#56b6c3" opacity=".22" filter="url(#glow)"/>
+<rect x="213" y="163" width="309" height="139" rx="10" fill="url(#warm)" stroke="#d7a884" stroke-width="6"/><rect x="686" y="163" width="295" height="139" rx="10" fill="url(#cool)" stroke="#9bc9b9" stroke-width="6"/>
+<g fill="none" stroke="#f5d8a5" stroke-width="3" opacity=".65"><path d="M237 182h80v32h68m-148 33h119v35h90m-100-98h92v-14m-65 76h113"/><path d="M713 182h83v30h70m-153 35h122v35h91m-84-100h92m-46 64h70"/></g>
+<g fill="#f4dcbc"><rect x="333" y="199" width="57" height="55" rx="5"/><rect x="800" y="199" width="57" height="55" rx="5"/></g><g fill="#294751"><rect x="343" y="209" width="37" height="35" rx="2"/><rect x="810" y="209" width="37" height="35" rx="2"/></g>
+<path d="M523 220h162v27H523z" fill="url(#copper)" stroke="#f1c98c" stroke-width="4"/><path d="M548 233h112" stroke="#fff2c7" stroke-width="3" stroke-dasharray="7 11"/>
+<g fill="#f6e9cc" font-family="system-ui,sans-serif" font-weight="700" letter-spacing="2"><text x="366" y="286" text-anchor="middle" font-size="21">POWER</text><text x="834" y="286" text-anchor="middle" font-size="21">CONTROL</text></g>
+<g stroke="#c9e8e2" stroke-width="3" fill="none" opacity=".8"><path d="M178 109v-38m7 9-7-9-7 9"/><path d="M1021 109v-38m7 9-7-9-7 9"/><path d="M592 106v-31m7 9-7-9-7 9"/></g>
+<path d="M101 363h997" stroke="#d3bf8e" stroke-width="5" stroke-linecap="round" opacity=".6"/>
+</svg>
+

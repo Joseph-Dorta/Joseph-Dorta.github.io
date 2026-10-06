@@ -24,6 +24,15 @@ async function handle({id, action, inputs}) {
       return;
     }
     if (!python) throw new Error('Load the calculator before running an analysis.');
+    if (action === 'stage') {
+      python.globals.set('web_inputs_json', JSON.stringify(inputs));
+      const result = await python.runPythonAsync(`
+web_request = json.loads(web_inputs_json)
+json.dumps(web_stage(web_request['step'], web_request['values']))
+`);
+      self.postMessage({id, data: JSON.parse(result)});
+      return;
+    }
     if (action === 'analyze') {
       // Clear the active record on failure; the prior runs remain in the history.
       latest = null;

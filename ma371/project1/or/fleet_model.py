@@ -169,6 +169,97 @@ def format_complex(z):
         return f"{z.real:.8g}"
     return f"{z.real:.6g}{z.imag:+.6g}i"
 
+def web_stage(step, inputs):
+    """Small, independently computed classroom steps; never pass rounded displays onward."""
+    counts = inputs["counts"]
+    base = counts_to_matrix(counts)
+    if step == "matrix":
+        # WEB_CODE_BEGIN matrix
+        totals = np.asarray(counts, dtype=float).sum(axis=0)
+        a = counts_to_matrix(counts)
+        result = {"origin_totals": totals.tolist(), "matrix": a.tolist(),
+                  "column_sums": a.sum(axis=0).tolist()}
+        # WEB_CODE_END matrix
+        return result
+
+    initial = np.asarray(inputs["initial"], dtype=float)
+    if initial.shape != (3,) or not np.all(np.isfinite(initial)) or np.any(initial < 0) or np.any(initial != np.floor(initial)) or initial.sum() <= 0:
+        raise ValueError("Enter three nonnegative whole-vehicle starting counts with a positive total.")
+    deadline = inputs["deadline"]
+    if not isinstance(deadline, (int, np.integer)) or not 1 <= deadline <= 52:
+        raise ValueError("Deadline must be a whole number from 1 to 52 weeks.")
+    target = float(inputs["target"])
+    if not np.isfinite(target) or target < 0:
+        raise ValueError("The expected-ready target must be nonnegative.")
+    effects = [inputs["prevention_effect"], inputs["repair_effect"]]
+    if not all(np.isfinite(z) and 0 <= z <= 100 for z in effects):
+        raise ValueError("Effectiveness must lie between 0 and 100 percent.")
+
+    if step == "advance":
+        # WEB_CODE_BEGIN advance
+        x1 = base @ initial
+        x2 = base @ x1
+        result = {"initial": initial.tolist(), "week_1": x1.tolist(),
+                  "week_2": x2.tolist(), "fleet_total": float(initial.sum())}
+        # WEB_CODE_END advance
+        return result
+
+    if step == "proposals":
+        # WEB_CODE_BEGIN proposals
+        proposed_p = np.asarray(DATA["proposed_prevention"], dtype=float)
+        proposed_r = np.asarray(DATA["proposed_repair"], dtype=float)
+        ap = check_matrix(base + effects[0]/100 * (proposed_p - base))
+        ar = check_matrix(base + effects[1]/100 * (proposed_r - base))
+        matrices = {"Baseline": base, "Prevention": ap, "Faster repairs": ar}
+        result = {name: {"matrix": a.tolist(),
+                         "deadline_state": (np.linalg.matrix_power(a, deadline) @ initial).tolist(),
+                         "meets_target": bool((np.linalg.matrix_power(a, deadline) @ initial)[0] >= target),
+                         "path": trajectory(a, initial, max(12, deadline)).tolist()}
+                  for name, a in matrices.items()}
+        # WEB_CODE_END proposals
+        return {"scenarios": result, "deadline": deadline, "target": target}
+
+    if step == "modes":
+        # WEB_CODE_BEGIN modes
+        ap = check_matrix(base + effects[0]/100 * (np.asarray(DATA["proposed_prevention"]) - base))
+        ar = check_matrix(base + effects[1]/100 * (np.asarray(DATA["proposed_repair"]) - base))
+        result = {name: matrix_summary(a) for name, a in
+                  {"Baseline": base, "Prevention": ap, "Faster repairs": ar}.items()}
+        # WEB_CODE_END modes
+        return {"scenarios": result, "fleet_total": float(initial.sum())}
+
+    if step == "holdout":
+        # WEB_CODE_BEGIN holdout
+        heldout = np.asarray(DATA["holdout_counts"], dtype=float)
+        origin_counts = heldout.sum(axis=0)
+        predicted = base @ origin_counts
+        observed = heldout.sum(axis=1)
+        result = {"origin_counts": origin_counts.tolist(),
+                  "predicted": predicted.tolist(), "observed": observed.tolist(),
+                  "residual": (observed - predicted).tolist(),
+                  "max_probability_difference": float(np.max(np.abs(counts_to_matrix(heldout) - base)))}
+        # WEB_CODE_END holdout
+        return result
+
+    if step == "sensitivity":
+        # WEB_CODE_BEGIN sensitivity
+        proposals = {"Prevention": np.asarray(DATA["proposed_prevention"]),
+                     "Faster repairs": np.asarray(DATA["proposed_repair"])}
+        result = {}
+        for name, proposal in proposals.items():
+            effect = inputs["prevention_effect"] if name == "Prevention" else inputs["repair_effect"]
+            curve = []
+            for percent in range(0, 101, 10):
+                a = check_matrix(base + percent/100 * (proposal - base))
+                curve.append({"effect_percent": percent,
+                              "expected_ready": float((np.linalg.matrix_power(a, deadline) @ initial)[0])})
+            a = check_matrix(base + effect/100 * (proposal - base))
+            result[name] = {"curve": curve, "selected_effect_percent": effect,
+                            "selected_expected_ready": float((np.linalg.matrix_power(a, deadline) @ initial)[0])}
+        # WEB_CODE_END sensitivity
+        return {"scenarios": result, "target": target, "deadline": deadline}
+    raise ValueError("Unknown classroom calculation step.")
+
 def analyze(counts, initial, deadline=2, prevention_effect=100, repair_effect=100, target=70):
     initial = np.asarray(initial, dtype=float)
     if initial.shape != (3,) or not np.all(np.isfinite(initial)) or np.any(initial<0):

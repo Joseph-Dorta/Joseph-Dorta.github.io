@@ -3,4 +3,13 @@
 @media(max-width:900px){.visual-grid{grid-template-columns:1fr}.one-scene,.unit-scene{max-width:720px;margin:auto}}@media(max-width:560px){.one-scene{grid-template-columns:1fr 1.1fr;gap:.5rem}.one-scene .ambient{grid-column:1/-1;flex-direction:row;justify-content:center}.unit-chassis{grid-template-columns:1fr;gap:.6rem}.bridge-visual{flex-direction:row;justify-content:center}.component{min-height:110px}.scenario-controls button{flex:1;min-width:120px}.time-controls .button{width:100%}}@media(prefers-reduced-motion:reduce){.component{transition:none}}@media print{.thermal-lab button,.time-controls,.code-view{display:none}.thermal-lab,.visual-panel{border:0;padding:0}.visual-grid{display:block}.plot{max-width:6.5in}}
 .plot-key[hidden]{display:none}
 .stale-visual{opacity:.55}
-
+/* A readable guide beside the laboratory, with a compact mobile summary. */
+.physics-page{max-width:1480px}.physics-page .hero-art{max-width:1180px}
+.lab-workspace{display:grid;grid-template-columns:minmax(0,1fr) 17rem;gap:1.25rem;align-items:start;margin-top:2rem}
+.lab-workspace>.thermal-lab{grid-column:1;grid-row:1;min-width:0;margin:0}
+.lab-guide{grid-column:2;grid-row:1;position:sticky;top:1rem;padding:1rem;border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:.35rem;background:var(--surface);font-size:.9rem;max-height:calc(100dvh - 2rem);overflow:auto}
+.lab-guide summary{cursor:pointer;font-weight:750}.guide-next{margin:0 0 .8rem;line-height:1.5}.guide-body{padding-top:.4rem}.guide-body ol{padding-left:1.2rem}.guide-body li{margin:.65rem 0}.guide-body .small{font-size:.8rem}.next-calculation{padding:.65rem .8rem;border-left:3px solid var(--accent);background:var(--wash)}
+.thermal-lab .lab-step,.thermal-lab #configuration-choice{scroll-margin-top:1.5rem}
+@media(max-width:1279px){.lab-workspace{grid-template-columns:minmax(0,1fr)}.lab-guide{grid-column:1;grid-row:1;top:0;z-index:3;padding:.7rem 1rem;max-height:55dvh}.lab-workspace>.thermal-lab{grid-column:1;grid-row:2}.lab-guide .guide-next{margin:0 0 .35rem}.guide-body{max-height:35dvh;overflow:auto}.thermal-lab .lab-step,.thermal-lab #configuration-choice,#evidence-step{scroll-margin-top:10rem}}
+@media(min-width:1280px) and (max-width:1450px){.lab-workspace .visual-grid{grid-template-columns:1fr}}
+@media print{.lab-guide{display:none}.lab-workspace{display:block}.physics-page{max-width:none}}

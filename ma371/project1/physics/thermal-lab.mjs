@@ -1,7 +1,7 @@
 const $ = id => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
 const CASES = {baseline: {h: 1, g: .5, label: 'Baseline'}, ventilation: {h: 1.35, g: .5, label: 'Ventilation'}, bridge: {h: 1, g: 1, label: 'Bridge'}};
-const state = {oneVersion: 0, twoVersion: 0, oneBalance: null, oneCurve: null, twoModel: null, modes: null, forecast: null, selectedCase: 'baseline', lens: 'temperature', runs: [], evidence: [], play: null};
+const state = {oneVersion: 0, twoVersion: 0, oneBalance: null, oneCurve: null, twoModel: null, modes: null, forecast: null, selectedCase: 'baseline', lens: 'temperature', runs: [], evidence: [], play: null, busy: false, exportedCount: 0};
 let worker, nextId = 0;
 const pending = new Map();
 
@@ -31,9 +31,44 @@ function calculate(action, payload) {
   return new Promise((resolve, reject) => { pending.set(id, {resolve, reject}); worker.postMessage({id, action, payload}); });
 }
 async function run(action, payload, apply) {
+  if (state.busy) return;
+  state.busy = true; updateGuide();
   status(`Calculating ${action.replace('_', ' ')}…`);
-  try { const output = await calculate(action, payload); apply(output); state.evidence.push({step: action, exact_inputs: snapshot(payload), exact_result: output, recorded_at: new Date().toISOString()}); $('export-button').disabled = false; status(`${action.replace('_', ' ')} calculation complete. Read and interpret the result before proceeding.`); }
+  try { const output = await calculate(action, payload); if (apply(output) === false) { status('Inputs changed during the calculation. Recalculate with the current inputs.'); return; } state.evidence.push({step: action, exact_inputs: snapshot(payload), exact_result: output, recorded_at: new Date().toISOString()}); status(`${action.replace('_', ' ')} calculation complete. Read and interpret the result before proceeding.`); }
   catch (error) { status(error.message, true); }
+  finally { state.busy = false; updateGuide(); }
+}
+
+function updateGuide() {
+  const label = CASES[state.selectedCase]?.label || 'Custom configuration';
+  const available = {
+    'one-balance-button': true, 'one-curve-button': !!state.oneBalance,
+    'two-model-button': true, 'modes-button': !!state.twoModel,
+    'forecast-button': !!state.modes,
+    'validation-button': state.runs.some(run => run.caseName === 'Baseline' && canonicalBaseline(run.inputs)),
+    'sensitivity-button': !!state.forecast, 'export-button': state.evidence.length > 0
+  };
+  for (const [id, ready] of Object.entries(available)) $(id).disabled = state.busy || !ready;
+  const modelNext = !state.twoModel ? ['two-model-step', `construct the two-module matrix for ${label}`]
+    : !state.modes ? ['modes-step', `find the eigenmodes for ${label}`]
+    : !state.forecast ? ['forecast-step', `forecast ${label}`]
+    : ['configuration-choice', 'select another configuration to compare'];
+  for (const id of ['configuration-next', 'forecast-next']) {
+    const link = $(id).querySelector('a'); link.href = '#' + modelNext[0]; link.textContent = 'Next: ' + modelNext[1] + '.';
+  }
+  let next = !state.oneBalance ? ['one-balance-step', 'calculate the one-module heat balance']
+    : !state.oneCurve ? ['one-curve-step', 'generate the one-module curve'] : modelNext;
+  if (state.oneCurve && state.forecast) {
+    const savedCases = new Set(state.runs.map(run => run.caseName));
+    if (['Baseline', 'Ventilation', 'Bridge'].every(name => savedCases.has(name))) {
+      if (!state.evidence.some(item => item.step === 'validation')) next = ['validation-step', 'check the held-out baseline readings'];
+      else if (!state.evidence.some(item => item.step === 'sensitivity' && JSON.stringify(item.exact_inputs) === JSON.stringify(state.forecast.inputs))) next = ['sensitivity-step', `test ${label} on a hotter day`];
+      else next = ['evidence-step', state.exportedCount === state.evidence.length ? 'review your worksheet explanations and saved evidence' : 'export completed evidence'];
+    }
+  }
+  $('guide-case').textContent = `Selected: ${label}`;
+  $('guide-next').href = '#' + next[0]; $('guide-next').textContent = 'Next: ' + next[1];
+  $('guide-progress').textContent = state.runs.length ? `Saved forecasts: ${[...new Set(state.runs.map(run => run.caseName))].join(', ')}. ${state.evidence.length} completed calculations recorded.` : 'No completed forecasts yet.';
 }
 function invalidateOne() {
   stopAnimation(); state.oneVersion++; state.oneBalance = null; state.oneCurve = null;
@@ -41,6 +76,7 @@ function invalidateOne() {
   document.querySelector('#one-curve-step .visual-grid').classList.add('stale-visual');
   for (const id of ['one-balance-result','one-curve-result']) if ($(id).classList.contains('current')) $(id).className = 'step-result stale';
   status('One-module inputs changed. Recalculate the heat balance and curve.');
+  updateGuide();
 }
 function invalidateTwo() {
   stopAnimation(); state.twoVersion++; state.twoModel = null; state.modes = null; state.forecast = null;
@@ -51,6 +87,7 @@ function invalidateTwo() {
   $('unit-reading').textContent = 'Inputs changed. The dimmed diagram and graph show the last completed run until you calculate again.';
   for (const id of ['two-model-result','modes-result','forecast-result','sensitivity-result']) if ($(id).classList.contains('current')) $(id).className = 'step-result stale';
   status('Two-module inputs changed. Rebuild the model, then its modes and forecast. Saved completed runs remain in the table.');
+  updateGuide();
 }
 
 function thermalColor(temp) {
@@ -62,6 +99,7 @@ function thermalColor(temp) {
   }
 }
 function at(points, t) {
+  t = Math.max(0, Math.min(Number.isFinite(t) ? t : 0, points.length - 1));
   const low = Math.min(Math.floor(t), points.length - 1), high = Math.min(low + 1, points.length - 1), f = t - low;
   return points[low].map((v, i) => i === 0 ? t : v + f * (points[high][i] - v));
 }
@@ -72,7 +110,7 @@ function setOneTime(t) {
   $('one-component').style.setProperty('--thermal-color', thermalColor(value));
   $('one-power-label').textContent = `P = ${format(p.P)} kJ/min`;
   $('one-loss-label').textContent = `h(T − Tₐ) = ${signed(p.h*(value-p.Ta))} kJ/min`;
-  drawChart('one-chart', state.oneCurve.output.points, t, {one:true, equilibrium:state.oneBalance.output.equilibrium});
+  drawChart('one-chart', state.oneCurve.output.points, t, {one:true, equilibrium:state.oneBalance.output.equilibrium, tau:p.C/p.h});
 }
 function setTwoTime(t) {
   if (!state.forecast) return;
@@ -112,9 +150,13 @@ function drawChart(id, points, time, options) {
   if (ymax-ymin<10) ymax=ymin+10;
   const x=t => L+(width-L-R)*t/60, y=v => height-B-(height-T-B)*(v-ymin)/(ymax-ymin);
   for (let i=0;i<=4;i++) { const value=ymin+(ymax-ymin)*i/4; const yy=y(value); plot.append(svg('line',{x1:L,y1:yy,x2:width-R,y2:yy,class:'grid'})); const label=svg('text',{x:8,y:yy+5,class:'tick'}); label.textContent=format(value,1); plot.append(label); }
-  for (const minute of [0,15,30,45,60]) { const xx=x(minute); plot.append(svg('line',{x1:xx,y1:T,x2:xx,y2:height-B,class:'grid'})); const label=svg('text',{x:xx-8,y:height-17,class:'tick'}); label.textContent=minute; plot.append(label); }
+  for (const minute of [0,15,30,45,60]) { const xx=x(minute); plot.append(svg('line',{x1:xx,y1:T,x2:xx,y2:height-B,class:'grid'})); const label=svg('text',{x:xx-8,y:height-25,class:'tick'}); label.textContent=minute; plot.append(label); }
   plot.append(svg('line',{x1:L,y1:height-B,x2:width-R,y2:height-B,class:'axis'}));
-  const unit=svg('text',{x:7,y:18,class:'axis-label'});unit.textContent='°C';plot.append(unit);const mins=svg('text',{x:width-80,y:height-9,class:'axis-label'});mins.textContent='minutes';plot.append(mins);
+  const unit=svg('text',{x:7,y:18,class:'axis-label'});unit.textContent='°C';plot.append(unit);const mins=svg('text',{x:width-R,y:height-5,"text-anchor":"end",class:'axis-label'});mins.textContent='minutes';plot.append(mins);
+  if (one && options.tau > 0 && options.tau <= 60) {
+    const xx=x(options.tau); plot.append(svg('line',{x1:xx,y1:T,x2:xx,y2:height-B,stroke:'var(--muted)','stroke-width':1.5,'stroke-dasharray':'3 5'}));
+    const label=svg('text',{x:Math.min(width-R-115,Math.max(L+5,xx+5)),y:T+18,class:'tick'}); label.textContent=`τ = ${format(options.tau,1)} min`; plot.append(label);
+  }
   const series=(index,klass)=>{const path=svg('path',{d:points.map((row,i)=>`${i?'L':'M'}${x(row[0]).toFixed(2)} ${y(row[index]).toFixed(2)}`).join(' '),class:klass});plot.append(path);const value=at(points,time)[index];plot.append(svg('circle',{cx:x(time),cy:y(value),r:7,class:'marker',fill:klass==='series-power'?'#c45138':'#2b8fa3'}));};
   if(one){plot.append(svg('line',{x1:L,y1:y(options.equilibrium),x2:width-R,y2:y(options.equilibrium),class:'limit'}));series(1,'series-power');}
   else if(lens==='temperature'){for(const limit of [34.5,29])plot.append(svg('line',{x1:L,y1:y(limit),x2:width-R,y2:y(limit),class:'limit'}));series(1,'series-power');series(2,'series-control');}
@@ -126,9 +168,15 @@ function drawChart(id, points, time, options) {
 function play(which) {
   const current=which==='one'?'one-time':'two-time', button=which==='one'?'one-play':'two-play', setter=which==='one'?setOneTime:setTwoTime;
   if(state.play?.which===which){stopAnimation();return;} stopAnimation();
-  let start=Number($(current).value); if(start>=60)start=0;
-  const begun=performance.now();$(button).textContent='Pause';
-  function frame(now){const t=Math.min(60,start+(now-begun)/220);$(current).value=t;setter(t);if(t<60)state.play.frame=requestAnimationFrame(frame);else stopAnimation();}
+  let start=Math.max(0,Math.min(60,Number($(current).value)||0)); if(start>=60)start=0;
+  let begun; $(button).textContent='Pause';
+  function frame(now){
+    if (!state.play || state.play.which !== which) return;
+    begun ??= now;
+    const t=Math.max(0,Math.min(60,start+Math.max(0,now-begun)/220));
+    $(current).value=t;setter(t);
+    if(t<60)state.play.frame=requestAnimationFrame(frame);else stopAnimation();
+  }
   state.play={which,frame:requestAnimationFrame(frame)};
 }
 
@@ -152,13 +200,15 @@ $$('[data-case]').forEach(button=>button.addEventListener('click',()=>{state.sel
 $$('[data-lens]').forEach(button=>button.addEventListener('click',()=>{state.lens=button.dataset.lens;$$('[data-lens]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));if(state.forecast)setTwoTime(Number($('two-time').value));else $('mode-explanation').textContent={temperature:'Component temperatures show what each operating limit measures.',sum:'The sum mode follows overall thermal elevation. Bridge transfer cancels from its rate equation.',contrast:'The contrast mode follows the temperature difference. Greater bridge conductance speeds its decay.'}[state.lens];}));
 $('one-time').addEventListener('input',event=>setOneTime(Number(event.target.value)));$('two-time').addEventListener('input',event=>setTwoTime(Number(event.target.value)));$('one-play').addEventListener('click',()=>play('one'));$('two-play').addEventListener('click',()=>play('two'));
 
-$('one-balance-button').addEventListener('click',()=>{const version=state.oneVersion,p=inputValues('one-inputs');run('one_balance',p,out=>{if(version!==state.oneVersion)return;state.oneBalance={inputs:snapshot(p),output:out};state.oneCurve=null;$('one-curve-button').disabled=false;result('one-balance-result',`At t = 0: production ${format(out.production)} kJ/min, ambient loss ${signed(out.ambient_loss)} kJ/min.\nT′(0) = ${signed(out.initial_slope)} °C/min. Equilibrium T* = ${format(out.equilibrium)}°C; C/h = ${format(out.time_constant)} min.`);});});
-$('one-curve-button').addEventListener('click',()=>{if(!state.oneBalance)return;const version=state.oneVersion,p=state.oneBalance.inputs;run('one_curve',p,out=>{if(version!==state.oneVersion)return;state.oneCurve={inputs:p,output:out};document.querySelector('#one-curve-step .visual-grid').classList.remove('stale-visual');$('one-time').disabled=false;$('one-play').disabled=false;$('one-time').value=0;setOneTime(0);result('one-curve-result',`T(10) = ${format(out.temperature_at_10,3)}°C. The heat-balance residual C·T′ − [P − h(T−Tₐ)] at 10 min is ${format(out.ode_residual_at_10,9)} kJ/min. This numerical check confirms the formula satisfies the modeled ODE at that time.`);});});
-$('two-model-button').addEventListener('click',()=>{const version=state.twoVersion,p=inputValues('two-inputs');run('two_model',p,out=>{if(version!==state.twoVersion)return;state.twoModel={inputs:snapshot(p),output:out};state.modes=null;state.forecast=null;$('modes-button').disabled=false;result('two-model-result',`θ′ = Aθ + b, with θ = (T₁−Tₐ, T₂−Tₐ)ᵀ.\nA = [${out.A[0].map(x=>format(x,4)).join('   ')}]\n    [${out.A[1].map(x=>format(x,4)).join('   ')}] min⁻¹\nb = (${out.b.map(x=>format(x,4)).join(', ')})ᵀ °C/min\nAt power-on, T′ = (${out.initial_slopes.map(x=>signed(x)).join(', ')})ᵀ °C/min; contact flow = ${signed(out.initial_contact)} kJ/min.`, 'current');});});
-$('modes-button').addEventListener('click',()=>{if(!state.twoModel)return;const version=state.twoVersion,p=state.twoModel.inputs;run('modes',p,out=>{if(version!==state.twoVersion)return;state.modes={inputs:p,output:out};$('forecast-button').disabled=false;result('modes-result',`v₊ = (1, 1)ᵀ, λ₊ = ${format(out.lambda_plus,4)} min⁻¹: overall elevation.\nv₋ = (1, −1)ᵀ, λ₋ = ${format(out.lambda_minus,4)} min⁻¹: temperature contrast.\ns* = ${format(out.s_star,3)}°C, d* = ${format(out.d_star,3)}°C.\nEquilibrium: T₁* = ${format(out.temperature_star[0],3)}°C; T₂* = ${format(out.temperature_star[1],3)}°C.`);});});
-$('forecast-button').addEventListener('click',()=>{if(!state.modes)return;const version=state.twoVersion,p=state.modes.inputs,caseName=CASES[state.selectedCase]?.label||'Custom';run('forecast',p,out=>{if(version!==state.twoVersion)return;state.forecast={inputs:p,output:out,caseName};document.querySelector('#forecast-step .visual-grid').classList.remove('stale-visual');addRun(state.forecast);$('two-time').disabled=false;$('two-play').disabled=false;$('sensitivity-button').disabled=false;if(state.selectedCase==='baseline'&&canonicalBaseline(p))$('validation-button').disabled=false;$('two-time').value=0;setTwoTime(0);result('forecast-result',`${caseName} at 30 min: power ${format(out.at30[0],3)}°C (limit 34.5°C), control ${format(out.at30[1],3)}°C (limit 29.0°C). Both limits: ${out.at30_within_limits?'met':'not met'}.\nAt 30 min, contact flow = ${signed(out.heat_flow_at30.bridge_1_to_2)} kJ/min from module 1 toward module 2. Equilibrium: (${out.equilibrium.map(x=>format(x,3)).join(', ')})°C.`, 'current');if(!canonicalBaseline(p))status('Forecast complete. Compare only runs with the same initial conditions and heat inputs; the packet limits assume its stated case.');});});
+$('one-balance-button').addEventListener('click',()=>{const version=state.oneVersion,p=inputValues('one-inputs');run('one_balance',p,out=>{if(version!==state.oneVersion)return false;state.oneBalance={inputs:snapshot(p),output:out};state.oneCurve=null;$('one-curve-button').disabled=false;result('one-balance-result',`At t = 0: production ${format(out.production)} kJ/min, ambient loss ${signed(out.ambient_loss)} kJ/min.\nT′(0) = ${signed(out.initial_slope)} °C/min. Equilibrium T* = ${format(out.equilibrium)}°C; C/h = ${format(out.time_constant)} min.`);});});
+$('one-curve-button').addEventListener('click',()=>{if(!state.oneBalance)return;const version=state.oneVersion,p=state.oneBalance.inputs;run('one_curve',p,out=>{if(version!==state.oneVersion)return false;state.oneCurve={inputs:p,output:out};document.querySelector('#one-curve-step .visual-grid').classList.remove('stale-visual');$('one-time').disabled=false;$('one-play').disabled=false;$('one-time').value=0;setOneTime(0);result('one-curve-result',`T(10) = ${format(out.temperature_at_10,3)}°C. The heat-balance residual C·T′ − [P − h(T−Tₐ)] at 10 min is ${format(out.ode_residual_at_10,9)} kJ/min. This numerical check confirms the formula satisfies the modeled ODE at that time.`);});});
+$('two-model-button').addEventListener('click',()=>{const version=state.twoVersion,p=inputValues('two-inputs');run('two_model',p,out=>{if(version!==state.twoVersion)return false;state.twoModel={inputs:snapshot(p),output:out};state.modes=null;state.forecast=null;$('modes-button').disabled=false;result('two-model-result',`θ′ = Aθ + b, with θ = (T₁−Tₐ, T₂−Tₐ)ᵀ.\nA = [${out.A[0].map(x=>format(x,4)).join('   ')}]\n    [${out.A[1].map(x=>format(x,4)).join('   ')}] min⁻¹\nb = (${out.b.map(x=>format(x,4)).join(', ')})ᵀ °C/min\nAt power-on, T′ = (${out.initial_slopes.map(x=>signed(x)).join(', ')})ᵀ °C/min; contact flow = ${signed(out.initial_contact)} kJ/min.`, 'current');});});
+$('modes-button').addEventListener('click',()=>{if(!state.twoModel)return;const version=state.twoVersion,p=state.twoModel.inputs;run('modes',p,out=>{if(version!==state.twoVersion)return false;state.modes={inputs:p,output:out};$('forecast-button').disabled=false;result('modes-result',`v₊ = (1, 1)ᵀ, λ₊ = ${format(out.lambda_plus,4)} min⁻¹: overall elevation.\nv₋ = (1, −1)ᵀ, λ₋ = ${format(out.lambda_minus,4)} min⁻¹: temperature contrast.\ns* = ${format(out.s_star,3)}°C, d* = ${format(out.d_star,3)}°C.\nEquilibrium: T₁* = ${format(out.temperature_star[0],3)}°C; T₂* = ${format(out.temperature_star[1],3)}°C.`);});});
+$('forecast-button').addEventListener('click',()=>{if(!state.modes)return;const version=state.twoVersion,p=state.modes.inputs,caseName=CASES[state.selectedCase]?.label||'Custom';run('forecast',p,out=>{if(version!==state.twoVersion)return false;state.forecast={inputs:p,output:out,caseName};document.querySelector('#forecast-step .visual-grid').classList.remove('stale-visual');addRun(state.forecast);$('two-time').disabled=false;$('two-play').disabled=false;$('sensitivity-button').disabled=false;if(state.selectedCase==='baseline'&&canonicalBaseline(p))$('validation-button').disabled=false;$('two-time').value=0;setTwoTime(0);result('forecast-result',`${caseName} at 30 min: power ${format(out.at30[0],3)}°C (limit 34.5°C), control ${format(out.at30[1],3)}°C (limit 29.0°C). Both limits: ${out.at30_within_limits?'met':'not met'}.\nAt 30 min, contact flow = ${signed(out.heat_flow_at30.bridge_1_to_2)} kJ/min from module 1 toward module 2. Equilibrium: (${out.equilibrium.map(x=>format(x,3)).join(', ')})°C.`, 'current');if(!canonicalBaseline(p))status('Forecast complete. Compare only runs with the same initial conditions and heat inputs; the packet limits assume its stated case.');});});
 $('validation-button').addEventListener('click',()=>{const baseline=state.runs.findLast(run=>run.caseName==='Baseline'&&canonicalBaseline(run.inputs));if(!baseline){status('Run the packet baseline case before checking its held-out readings.',true);return;}run('validation',baseline.inputs,out=>{const lines=out.rows.map(row=>`${row.time} min: predicted (${row.predicted.map(x=>format(x,2)).join(', ')})°C; observed (${row.measured.map(x=>format(x,2)).join(', ')})°C; residual (${row.residual.map(x=>signed(x,2)).join(', ')})°C.`);result('validation-result',lines.join('\n')+'\nA residual is observed minus predicted; a positive residual means the model predicted too cool.');});});
 $('sensitivity-button').addEventListener('click',()=>{if(!state.forecast)return;const runSnapshot=state.forecast;run('sensitivity',runSnapshot.inputs,out=>{result('sensitivity-result',`${runSnapshot.caseName} at 22°C ambient: 30-min T₁ = ${format(out.at30[0],3)}°C; T₂ = ${format(out.at30[1],3)}°C. Both limits: ${out.at30[0]<=34.5&&out.at30[1]<=29?'met':'not met'}.\nThe initial temperatures also shift to 22°C, so the temperature elevations relative to ambient follow the same curves.`);});});
-$('export-button').addEventListener('click',()=>{const data={case:'MA371 Physics synthetic thermal inquiry',created_at:new Date().toISOString(),completed_steps:state.evidence,completed_forecasts:state.runs};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='MA371_Physics_Completed_Evidence.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
-loadCode();
-
+$('export-button').addEventListener('click',()=>{const data={case:'MA371 Physics synthetic thermal inquiry',created_at:new Date().toISOString(),completed_steps:state.evidence,completed_forecasts:state.runs};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='MA371_Physics_Completed_Evidence.json';link.click();state.exportedCount=state.evidence.length;updateGuide();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+const guideWideScreen = window.matchMedia('(min-width: 1280px)');
+function adaptGuide() { $('guide-details').open = guideWideScreen.matches; }
+guideWideScreen.addEventListener('change', adaptGuide);
+adaptGuide(); updateGuide(); loadCode();

@@ -1,4 +1,5 @@
-import {showFlow, clearFlow} from './flow-rail.mjs';
+import {showFlow, clearFlow} from './flow-rail.mjs?v=20261009-visuals';
+import {showForecast, showModes, clearForecast, clearModes} from './trajectory-view.mjs?v=20261009-visuals';
 
 const form = document.querySelector('#fleet-form');
 const loadButton = document.querySelector('#load-calculator');
@@ -44,6 +45,7 @@ function failWorker() {
   latest = null;
   completed.clear();
   clearFlow();
+  clearForecast();
   busy = false;
   loadButton.disabled = false;
   loadButton.textContent = 'Reload calculator';
@@ -117,6 +119,7 @@ function invalidate() {
   }
   dirty = Boolean(latest);
   clearFlow();
+  clearForecast();
   note();
   controls();
 }
@@ -142,7 +145,13 @@ async function runStep(step) {
     const node = document.querySelector(`#${step}-result`);
     node.className = 'stage-result current';
     node.textContent = stageText(step, output.data, values);
-    if (step === 'proposals') showFlow({results: output.data.scenarios});
+    if (index < 2) { clearFlow(); clearForecast(); }
+    if (index <= 3) clearModes();
+    if (step === 'proposals') {
+      showFlow({results: output.data.scenarios});
+      showForecast(output.data, values);
+    }
+    if (step === 'modes') showModes(output.data);
     if (final) {
       latest = final.record;
       dirty = false;
@@ -173,7 +182,7 @@ loadButton.addEventListener('click', async () => {
   controls();
   timer = setTimeout(() => message('Still loading Python and NumPy. Keep this page open; if the network blocks the download, use Colab.'), 15000);
   try {
-    worker = new Worker(new URL('./lab-worker.mjs', import.meta.url), {type: 'module'});
+    worker = new Worker(new URL('./lab-worker.mjs?v=20261009-visuals', import.meta.url), {type: 'module'});
     worker.onmessage = event => {
       if (event.data.type === 'progress') { message(event.data.message); return; }
       const entry = pending.get(event.data.id);
@@ -224,7 +233,7 @@ for (const detail of document.querySelectorAll('.code-view[data-step]')) {
     const code = detail.querySelector('pre');
     if (!detail.open || code.dataset.loaded) return;
     try {
-      const response = await fetch('./fleet_model.py');
+      const response = await fetch('./fleet_model.py?v=20261009-visuals');
       if (!response.ok) throw new Error('Python source unavailable.');
       const source = await response.text();
       const step = detail.dataset.step;
@@ -238,7 +247,7 @@ document.querySelector('#code-view').addEventListener('toggle', async event => {
   const code = document.querySelector('#model-code');
   if (!event.target.open || code.dataset.loaded) return;
   try {
-    const response = await fetch('./fleet_model.py');
+    const response = await fetch('./fleet_model.py?v=20261009-visuals');
     if (!response.ok) throw new Error('Code view unavailable; use the source download.');
     code.textContent = await response.text();
     code.dataset.loaded = 'true';
@@ -248,4 +257,3 @@ if (!window.Worker || !window.WebAssembly) {
   loadButton.disabled = true;
   message('This browser does not support the calculator. Use the Colab fallback.', true);
 }
-

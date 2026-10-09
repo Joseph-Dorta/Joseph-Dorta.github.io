@@ -10,7 +10,7 @@ async function initialize() {
   python = await loadPyodide({indexURL: 'https://cdn.jsdelivr.net/pyodide/v314.0.7/full/'});
   self.postMessage({type: 'progress', message: 'Loading NumPy and the fleet model…'});
   await python.loadPackage('numpy');
-  const response = await fetch(new URL('./fleet_model.py', import.meta.url));
+  const response = await fetch(new URL('./fleet_model.py?v=20261009-visuals', import.meta.url));
   if (!response.ok) throw new Error('The fleet model could not be loaded.');
   await python.runPythonAsync(await response.text());
   return JSON.parse(python.runPython('json.dumps(DATA)'));
@@ -76,4 +76,3 @@ base64.b64encode(web_buffer.getvalue()).decode('ascii')
 self.onmessage = event => {
   queue = queue.then(() => handle(event.data));
 };
-

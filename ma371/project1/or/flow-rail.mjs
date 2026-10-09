@@ -1,8 +1,6 @@
 // Animated vehicle icons visualize proportional expected flow, never literal vehicles.
 const rail = document.querySelector('#fleet-flow');
-const scenario = document.querySelector('#flow-scenario');
 const origin = document.querySelector('#flow-origin');
-const week = document.querySelector('#flow-week');
 const svg = document.querySelector('#flow-svg');
 const values = document.querySelector('#flow-values');
 const context = document.querySelector('#flow-context');
@@ -14,6 +12,7 @@ const colors = ['#006678', '#956200', '#693091'];
 const destinations = [40, 130, 220];
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let record = null, particles = [], frame = 0, playing = !reducedMotion, start = 0, dirty = false;
+let selection = {scenario: 'Baseline', week: 0};
 
 function el(name, attributes = {}, parent = svg) {
   const node = document.createElementNS(ns, name);
@@ -88,14 +87,14 @@ function drawValues(flow, sourceCount) {
 }
 function draw() {
   if (!record) return;
-  const result = record.results[scenario.value];
-  const k = Number(week.value);
+  const result = record.results[selection.scenario];
+  const k = selection.week;
   const j = Number(origin.value);
   if (!result || !result.path[k] || !Number.isInteger(j) || j < 0 || j > 2) return;
   const sourceCount = result.path[k][j];
   const flow = result.matrix.map(row => row[j] * sourceCount);
   context.textContent = `Completed forecast · week ${k} to ${k+1}. ${dirty ? 'Inputs changed; run again to update.' : ''}`;
-  svg.setAttribute('aria-label', `${scenario.value}, week ${k} to ${k+1}, from ${states[j]}: ${flow.map((amount,i)=>`${amount.toFixed(2)} expected to ${states[i]}`).join('; ')}`);
+  svg.setAttribute('aria-label', `${selection.scenario}, week ${k} to ${k+1}, from ${states[j]}: ${flow.map((amount,i)=>`${amount.toFixed(2)} expected to ${states[i]}`).join('; ')}`);
   svg.replaceChildren();
   particles = [];
   destinations.forEach((y, i) => {
@@ -122,25 +121,21 @@ function draw() {
   drawValues(flow,sourceCount);
   schedule();
 }
-for (const control of [scenario,origin,week]) control.addEventListener('change',draw);
+origin.addEventListener('change',draw);
 play.addEventListener('click', () => { playing = !playing; schedule(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) schedule(); });
 
 export function showFlow(nextRecord) {
   record = nextRecord;
   dirty = false;
-  week.replaceChildren();
-  const maxWeek = record.results.Baseline.path.length - 1;
-  for (let k=0;k<maxWeek;k++) {
-    const option = document.createElement('option');
-    option.value = String(k);
-    option.textContent = `${k} to ${k+1}`;
-    week.append(option);
-  }
-  scenario.value = 'Baseline';
+  selection = {scenario: 'Baseline', week: 0};
   origin.value = '0';
-  week.value = '0';
   rail.hidden = false;
+  draw();
+}
+export function setFlowSelection(scenario, week) {
+  if (!record?.results[scenario]?.path[week] || !Number.isInteger(week) || week < 0) return;
+  selection = {scenario, week};
   draw();
 }
 export function setFlowDirty(value) {
@@ -156,4 +151,3 @@ export function clearFlow() {
   values.replaceChildren();
   rail.hidden = true;
 }
-

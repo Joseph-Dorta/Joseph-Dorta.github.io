@@ -169,6 +169,37 @@ def format_complex(z):
         return f"{z.real:.8g}"
     return f"{z.real:.6g}{z.imag:+.6g}i"
 
+def modal_history(a, initial, weeks):
+    """Full-precision ready-coordinate mode contributions for the teaching view."""
+    vals, basis = np.linalg.eig(a)
+    order = np.argsort(-np.abs(vals))
+    vals, basis = vals[order], basis[:, order]
+    if np.max(np.abs(vals.imag)) > 1e-9 or np.max(np.abs(basis.imag)) > 1e-9:
+        return {"available": False, "reason": "These edited rates have complex eigenmodes. The real weekly forecast remains available; a real-eigenvector mode plot is not applicable."}
+    vals, basis = vals.real, basis.real
+    condition = float(np.linalg.cond(basis))
+    if not np.isfinite(condition) or condition > 1e8:
+        return {"available": False, "reason": "A numerically reliable real eigenvector basis was not established for these edited rates. Use the direct weekly forecast."}
+    for j in range(3):
+        vector = basis[:, j]
+        if abs(vals[j] - 1) < 1e-8 and abs(vector.sum()) > 1e-10:
+            basis[:, j] = vector / vector.sum()
+        else:
+            vector = vector / np.max(np.abs(vector))
+            first = next((z for z in vector if abs(z) > 1e-9), 1)
+            basis[:, j] = -vector if first < 0 else vector
+    coefficients = np.linalg.solve(basis, initial)
+    powers = vals[:, None] ** np.arange(weeks + 1)[None, :]
+    reconstruction = (basis @ (coefficients[:, None] * powers)).T
+    error = float(np.max(np.abs(reconstruction - trajectory(a, initial, weeks))))
+    if error > 1e-7 * max(1., float(np.sum(initial))):
+        return {"available": False, "reason": "The eigenmode reconstruction did not meet the numerical accuracy check. Use the direct weekly forecast."}
+    return {"available": True, "reconstruction_error": error,
+            "modes": [{"eigenvalue": float(vals[j]), "coefficient": float(coefficients[j]),
+                       "eigenvector": basis[:, j].tolist(),
+                       "ready_contribution": (coefficients[j] * basis[0, j] * powers[j]).tolist()}
+                      for j in range(3)]}
+
 def web_stage(step, inputs):
     """Small, independently computed classroom steps; never pass rounded displays onward."""
     counts = inputs["counts"]
@@ -223,8 +254,10 @@ def web_stage(step, inputs):
         # WEB_CODE_BEGIN modes
         ap = check_matrix(base + effects[0]/100 * (np.asarray(DATA["proposed_prevention"]) - base))
         ar = check_matrix(base + effects[1]/100 * (np.asarray(DATA["proposed_repair"]) - base))
-        result = {name: matrix_summary(a) for name, a in
-                  {"Baseline": base, "Prevention": ap, "Faster repairs": ar}.items()}
+        result = {}
+        for name, a in {"Baseline": base, "Prevention": ap, "Faster repairs": ar}.items():
+            result[name] = matrix_summary(a)
+            result[name]["modal_history"] = modal_history(a, initial, max(12, deadline))
         # WEB_CODE_END modes
         return {"scenarios": result, "fleet_total": float(initial.sum())}
 

@@ -86,7 +86,7 @@
 .calculator input[type=number], .fleet-flow select { background: var(--input-bg); color: var(--ink); border-color: var(--input-border); }
 .calculator-status.error { background: var(--error-bg); color: var(--error-ink); }
 .code-view pre { color: var(--ink); }
-.fleet-flow, .transition-diagram { background: var(--wash); border-color: var(--line); }
+.fleet-flow, .transition-diagram { background: var(--wash); color: var(--ink); border-color: var(--line); }
 .fleet-flow .flow-disclaimer { color: var(--muted); }
 .transition-diagram button { background: var(--surface); color: var(--accent); }
 .transition-diagram button[aria-pressed="true"] { background: var(--button-bg); color: var(--button-ink); }

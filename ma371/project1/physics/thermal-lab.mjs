@@ -15,6 +15,7 @@ function result(id, message, kind = 'current') {
 function mathematicalResult(id, markup) { const node = $(id); node.innerHTML = markup; node.className = 'step-result current'; }
 function format(x, digits = 3) { return Number(x).toFixed(digits).replace(/\.?0+$/, '') || '0'; }
 function signed(x, digits = 3) { return `${x >= 0 ? '+' : '−'}${format(Math.abs(x), digits)}`; }
+function signedReading(x) { return `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(3)}`; }
 function inputValues(id) { return Object.fromEntries([...$(id).querySelectorAll('input[data-key]')].map(input => [input.dataset.key, input.value])); }
 function snapshot(values) { return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, Number(value)])); }
 function stopAnimation() { if (state.play) cancelAnimationFrame(state.play.frame); state.play = null; $('one-play').textContent = 'Play'; $('two-play').textContent = 'Play'; }
@@ -90,7 +91,8 @@ function invalidateTwo() {
   $('validation-button').disabled = !state.runs.some(run => run.caseName === 'Baseline' && canonicalBaseline(run.inputs));
   $('two-time').disabled = true;
   document.querySelector('#forecast-step .visual-grid').classList.add('stale-visual');
-  $('unit-reading').textContent = 'Inputs changed. The dimmed diagram and graph show the last completed run until you calculate again.';
+  $('unit-reading-status').textContent = 'Inputs changed. The dimmed diagram and graph show the last completed run until you calculate again.';
+  $('unit-reading-status').hidden = false;
   for (const id of ['two-model-result','modes-result','forecast-result','sensitivity-result']) if ($(id).classList.contains('current')) $(id).className = 'step-result stale';
   status('Two-module inputs changed. Rebuild the model, then its modes and forecast. Saved completed runs remain in the table.');
   updateGuide();
@@ -121,24 +123,29 @@ function setOneTime(t) {
 function setTwoTime(t) {
   if (!state.forecast) return;
   const p = state.forecast.inputs, [_, t1, t2] = at(state.forecast.output.points, t);
-  $('two-time-value').textContent = `${format(t,1)} min`;
-  $('power-temp').textContent = `${format(t1,2)}°C`; $('control-temp').textContent = `${format(t2,2)}°C`;
+  $('two-time-value').textContent = `${t.toFixed(1)} min`;
+  $('power-temp').textContent = `${t1.toFixed(2)}°C`; $('control-temp').textContent = `${t2.toFixed(2)}°C`;
   $('power-component').style.setProperty('--thermal-color', thermalColor(t1)); $('control-component').style.setProperty('--thermal-color', thermalColor(t2));
   $('power-component').querySelector('small').textContent = `P₁ = ${format(p.P1)} kJ/min`;
   $('control-component').querySelector('small').textContent = `P₂ = ${format(p.P2)} kJ/min`;
   const contact = p.g*(t1-t2), loss1=p.h*(t1-p.Ta), loss2=p.h*(t2-p.Ta);
   $('bridge-direction').textContent = Math.abs(contact) < 1e-10 ? '↔' : contact > 0 ? '→' : '←';
-  $('bridge-flow').textContent = `${signed(contact)} kJ/min`;
-  $('ambient-flows').textContent = `power ${signed(loss1)}, control ${signed(loss2)} kJ/min`;
+  $('bridge-flow').textContent = `${signedReading(contact)} kJ/min`;
+  $('power-ambient-flow').textContent = `${signedReading(loss1)} kJ/min`;
+  $('control-ambient-flow').textContent = `${signedReading(loss2)} kJ/min`;
   $('vent-indicator').classList.toggle('fan-on', state.forecast.caseName === 'ventilation');
-  $('unit-reading').textContent = `At ${format(t,1)} min, the ${contact >= 0 ? 'power' : 'control'} module sends ${format(Math.abs(contact))} kJ/min across the bridge. Each ambient-flow term is signed; negative means the air warms that module.`;
+  // Fixed-precision numeric fields keep the readout layout stable every frame.
+  $('unit-reading-time').textContent = `${t.toFixed(1)} min`;
+  $('unit-reading-flow').textContent = `${Math.abs(contact).toFixed(3)} kJ/min`;
+  $('unit-reading-direction').textContent = Math.abs(contact) < 1e-10 ? 'No net flow' : contact > 0 ? 'Power → control' : 'Control → power';
+  $('unit-reading-status').hidden = true;
   updateLens(t1,t2,p);
   drawChart('two-chart', state.forecast.output.points, t, {one:false, lens:state.lens, ambient:p.Ta});
 }
 function updateLens(t1,t2,p) {
   const s = t1+t2-2*p.Ta, d=t1-t2;
   const message = {
-    temperature:`At this moment T₁ = ${format(t1,2)}°C and T₂ = ${format(t2,2)}°C. Compare each with its own limit.`,
+    temperature:`At this moment T₁ = ${t1.toFixed(2)}°C and T₂ = ${t2.toFixed(2)}°C. Compare each with its own limit.`,
     sum:`s = (T₁ − Tₐ) + (T₂ − Tₐ) = ${format(s,2)}°C. Contact exchange cancels in s′; ambient cooling removes energy from the pair.`,
     contrast:`d = T₁ − T₂ = ${format(d,2)}°C. The bridge flow is g·d = ${signed(p.g*d)} kJ/min and acts to reduce the contrast.`
   };
